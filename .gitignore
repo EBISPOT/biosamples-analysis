@@ -1,2 +1,4 @@
 *.csv
+graph.db/
 load_env.sh
+

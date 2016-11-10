@@ -19,7 +19,7 @@ def get_files(mode="r"):
 	types_file = open("./output/tmp_types.csv", mode)
 	values_file = open("./output/tmp_values.csv", mode)
 	ontology_file = open("./output/tmp_ontologies.csv", mode)
-	has_attribute_file = open("./output/tmp_has_attributes.csv", mode)
+	has_attribute_file = open("./output/tmp_has_attribute.csv", mode)
 	has_type_file = open("./output/tmp_has_type.csv", mode)
 	has_value_file = open("./output/tmp_has_value.csv", mode)
 	has_iri_file = open("./output/tmp_has_iri.csv", mode)
@@ -44,6 +44,9 @@ def get_files(mode="r"):
 
 if __name__ == "__main__":
 
+	print "CSV file creation process started\n"
+
+	print "Deleting output folder content\n"
 	clear_output_folder()
 
 	files = get_files("a")
@@ -64,15 +67,16 @@ if __name__ == "__main__":
 	csv_types_writer.writerow(["attributeTypeId:ID(AttributeType)"])
 	csv_values_writer.writerow(["attributeValueId:ID(AttributeValue)"])
 	csv_ontology_writer.writerow(["ontologyIri:ID(OntologyTerm)"])
-	csv_has_attribute_writer.writerow([":START_ID(Sample),:END_ID(Attribute)"])
-	csv_has_type_writer.writerow([":START_ID(Attribute),:END_ID(AttributeType)"])
-	csv_has_value_writer.writerow([":START_ID(Attribute),:END_ID(AttributeValue)"])
-	csv_has_ontology_writer.writerow([":START_ID(Attribute),:END_ID(OntologyTerm)"])
+	csv_has_attribute_writer.writerow([":START_ID(Sample)", ":END_ID(Attribute)"])
+	csv_has_type_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeType)"])
+	csv_has_value_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeValue)"])
+	csv_has_ontology_writer.writerow([":START_ID(Attribute)", ":END_ID(OntologyTerm)"])
 
 	# Read annotations files and write output
 	file_number = 1
 	annotations_fields = ["accession", "attr_type", "attr_value", "onto_term"]
 	with open("biosamples-annotations-%d.csv" % file_number, 'r') as f:
+		print "Reading file #%d\n" % file_number
 		csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
 		csv_reader.next()  # skip first line
 		for line in csv_reader:
@@ -86,17 +90,19 @@ if __name__ == "__main__":
 			csv_attributes_writer.writerow([attr_key, attr_type, attr_value, onto_term])
 			csv_types_writer.writerow([attr_type])
 			csv_values_writer.writerow([attr_value])
-			csv_ontology_writer.writerow([onto_term])
 			csv_has_attribute_writer.writerow([accession, attr_key])
 			csv_has_type_writer.writerow([attr_key, attr_type])
 			csv_has_value_writer.writerow([attr_key, attr_value])
-			csv_has_ontology_writer.writerow([attr_key, onto_term])
+			if onto_term != "":
+				csv_ontology_writer.writerow([onto_term])
+				csv_has_ontology_writer.writerow([attr_key, onto_term])
 
 	for f in files["all"]:
 		f.close()
 
 	files = get_files()
 
+	print "Evaluate unique nodes/relationships\n"
 	for f in files["all"]:
 		f.seek(0)
 		seen = set()
