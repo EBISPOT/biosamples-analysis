@@ -1,0 +1,25 @@
+version: '2'
+
+services:
+  biosamples-metrics:
+    build: .
+    volumes:
+      - ./data:/data
+    command: ["-n", "1000", "-o", "/data/metric.csv"]
+    
+  neo4j:
+    image: neo4j:latest
+    volumes:
+      - ./data:/data
+    environment:
+      NEO4J_AUTH: none
+    expose:
+      - "7474"
+    network_mode: "host"
+    
+    
+#allowing docker-compose to create a new network can break internal connectivty on host  
+networks:
+  default:
+    external:
+      name: bridge
