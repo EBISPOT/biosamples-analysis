@@ -75,7 +75,7 @@ def write_results(results, block):
 
     with open(filename, 'a') as f:
         writer = unicodecsv.writer(f, delimiter=',')
-        print "Writing " + str(len(results)) + " annotations to " + filename
+        # print "Writing " + str(len(results)) + " annotations to " + filename
         for result in results:
             writer.writerow([result.accession, result.attributeType, result.attributeValue, result.ontologyTerm])
 
@@ -90,31 +90,39 @@ def main(argv):
     parser.add_argument('--numberofrows', '-n', type=int, default=1000)
     parser.add_argument('--startrow', '-s', type=int, default=0)
     parser.add_argument('--blocksize', '-b', type=int, default=100000)
+    parser.add_argument('--hostname', default="cocoa.ebi.ac.uk:8989")
     args = parser.parse_args()
 
 
-    baseurl = 'http://cocoa.ebi.ac.uk:8989/solr/samples/select?q=*%3A*&fl=accession%2C*_crt_json&wt=json&indent=true'
+    baseurl = 'http://'+args.hostname+'/solr/samples/select?q=*%3A*&fl=accession%2C*_crt_json&wt=json&indent=true'
 
     print "Starting to evaluate annotations in BioSamples (doing " + str(args.numberofrows) + " samples at a time)"
 
     # Execute request to get documents
-    initial_response = requests.get(baseurl + '&start=' + str(args.startrow) + '&rows=' + str(args.numberofrows))
+    initial_response = requests.get(baseurl)
 
     if initial_response.status_code == 200:
         total = count_results(json.loads(initial_response.content))
 
         print "Found " + str(total) + " sample documents in total"
 
-        while args.startrow < total:
-            block = (args.startrow / args.blocksize) + 1
-            request_url = baseurl + '&start=' + str(args.startrow) + '&rows=' + str(args.numberofrows)
-            response = requests.get(request_url)
-            print 'Fetching samples, done so far: ' + str(args.startrow)
-            if response.status_code == 200:
-                content = json.loads(response.content)
-                results = parse_response(content)
-                write_results(results, block)
-            args.startrow += args.numberofrows
+    print "Exporting annotations from BioSamples " \
+          "(fetching " + str(args.numberofrows) + " samples at a time, writing in blocks of " + str(args.blocksize) + ")"
+    while args.startrow < total:
+        if args.startrow % args.blocksize == 0:
+            sys.stdout.write("\n")
+            sys.stdout.write(str(args.startrow))
+            sys.stdout.flush()
+        block = (args.startrow / args.blocksize) + 1
+        request_url = baseurl + '&start=' + str(args.startrow) + '&rows=' + str(args.numberofrows)
+        response = requests.get(request_url)
+        if response.status_code == 200:
+            content = json.loads(response.content)
+            results = parse_response(content)
+            write_results(results, block)
+            sys.stdout.write(".")
+            sys.stdout.flush()
+        args.startrow += args.numberofrows
 
     print "All done!"
 
