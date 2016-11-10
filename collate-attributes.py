@@ -1,4 +1,3 @@
-import getopt
 import os
 import sys
 import json
@@ -6,6 +5,7 @@ import re
 import requests
 import unicodecsv
 import inflection
+import argparse
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 all_cap_re = re.compile('([a-z0-9])([A-Z])')
@@ -62,7 +62,11 @@ def parse_response(content):
 
 
 def write_results(results, block):
-    filename = "biosamples-annotations-" + str(block) + ".csv"
+    filename = "data/biosamples-annotations-" + str(block) + ".csv"
+    
+    filename = os.path.abspath(filename)
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
 
     if not os.path.exists(filename):
         with open(filename, 'w') as f:
@@ -82,47 +86,35 @@ def usage():
 
 
 def main(argv):
-    # How many rows to handle at once can be set by argument
-    start = 0
-    rows = 1000
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--numberofrows', '-n', type=int, default=1000)
+    parser.add_argument('--startrow', '-s', type=int, default=0)
+    parser.add_argument('--blocksize', '-b', type=int, default=100000)
+    args = parser.parse_args()
 
-    # How many samples per file output
-    blocksize = 100000
-
-    try:
-        opts, argv = getopt.getopt(argv, "hn:", ["help", "numberofrows="])
-    except getopt.GetoptError:
-            sys.exit(2)
-
-    for opt, arg in opts:
-            if opt in ("-h", "--help"):
-                usage()
-                sys.exit()
-            elif opt in ("-n", "--numberofrows"):
-                rows = int(arg)
 
     baseurl = 'http://cocoa.ebi.ac.uk:8989/solr/samples/select?q=*%3A*&fl=accession%2C*_crt_json&wt=json&indent=true'
 
-    print "Starting to evaluate annotations in BioSamples (doing " + str(rows) + " samples at a time)"
+    print "Starting to evaluate annotations in BioSamples (doing " + str(args.numberofrows) + " samples at a time)"
 
     # Execute request to get documents
-    initial_response = requests.get(baseurl + '&start=' + str(start) + '&rows=' + str(rows))
+    initial_response = requests.get(baseurl + '&start=' + str(args.startrow) + '&rows=' + str(args.numberofrows))
 
     if initial_response.status_code == 200:
         total = count_results(json.loads(initial_response.content))
 
         print "Found " + str(total) + " sample documents in total"
 
-        while start < total:
-            block = (start / blocksize) + 1
-            request_url = baseurl + '&start=' + str(start) + '&rows=' + str(rows)
+        while args.startrow < total:
+            block = (args.startrow / args.blocksize) + 1
+            request_url = baseurl + '&start=' + str(args.startrow) + '&rows=' + str(args.numberofrows)
             response = requests.get(request_url)
-            print 'Fetching samples, done so far: ' + str(start)
+            print 'Fetching samples, done so far: ' + str(args.startrow)
             if response.status_code == 200:
                 content = json.loads(response.content)
                 results = parse_response(content)
                 write_results(results, block)
-            start += rows
+            args.startrow += args.numberofrows
 
     print "All done!"
 
