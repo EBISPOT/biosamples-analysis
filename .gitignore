@@ -1,2 +1,2 @@
-biosamples-annotations*.csv
-output
+*.csv
+load_env.sh
