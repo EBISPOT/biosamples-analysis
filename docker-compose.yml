@@ -13,11 +13,17 @@ services:
     volumes:
       - ./data:/data
       - ./output:/output
+
+  populate-neo4j:
+    build: 
+      context: ./populate-neo4j
+    volumes:
+      - ./output:/output
     
   neo4j-server:
-    image: neo4j:latest
+    image: neo4j:3.0.6
     volumes:
-      - ./data:/data
+      - ./output/graph.db:/data/databases/graph.db
     environment:
       NEO4J_AUTH: none
     expose:
