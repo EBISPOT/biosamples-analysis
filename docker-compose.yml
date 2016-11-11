@@ -26,10 +26,8 @@ services:
       - ./output/graph.db:/data/databases/graph.db
     environment:
       NEO4J_AUTH: none
-    expose:
-      - "7474"
-      - "7687"
-    network_mode: "host"
+    ports:
+        - "7474:7474"
     
     
 #allowing docker-compose to create a new network can break internal connectivty on host  

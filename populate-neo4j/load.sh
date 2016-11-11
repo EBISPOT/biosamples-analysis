@@ -21,8 +21,8 @@ time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 10000 --into "$NEO4J_DATA/gr
         --relationships:has_iri "$NEO4J_DATA/has_iri.csv"
 
 # Create indexes
-#echo "Creating indexes..."
-#time nice "$NEO4J_BIN"/neo4j-shell -path $NEO4J_DATA/graph.db.tmp -file ./indexes.cypher
+echo "Creating indexes..."
+time nice "$NEO4J_BIN"/neo4j-shell -path "$NEO4J_DATA"/graph.db.tmp -file /indexes.cypher
 
 # Replace graph
 rm -rf "$NEO4J_DATA/graph.db"
