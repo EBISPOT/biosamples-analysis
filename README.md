@@ -4,9 +4,11 @@ Contains python scripts and cypher to read BioSamples info from Solr, store in N
 Docker
 ======
 
-Dockerfile constains ths instructions to build a docker container that will query Solr
-and build the csv files when run.
 
-docker-compose contains docker-compose instructions for that container, and for a neo4j instance
+The plan is to have 4 different docker containers:
+	collate-attributes to query Solr and create a single combined CSV
+	create-csv to split that combined CSV into separate ones
+	build-neo to use the neo4j bulk loader to create a graph database
+	neo-data to have a self-contained neo4j server with data inside
 
-docker-compose run biosamples-metrics
+docker-compose run collate-attributes
