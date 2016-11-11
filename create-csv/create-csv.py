@@ -14,15 +14,15 @@ def clear_output_folder():
 
 
 def get_files(mode="r"):
-	samples_file = open("./output/tmp_samples.csv", mode)
-	attributes_file = open("./output/tmp_attributes.csv", mode)
-	types_file = open("./output/tmp_types.csv", mode)
-	values_file = open("./output/tmp_values.csv", mode)
-	ontology_file = open("./output/tmp_ontologies.csv", mode)
-	has_attribute_file = open("./output/tmp_has_attribute.csv", mode)
-	has_type_file = open("./output/tmp_has_type.csv", mode)
-	has_value_file = open("./output/tmp_has_value.csv", mode)
-	has_iri_file = open("./output/tmp_has_iri.csv", mode)
+	samples_file = open("data/tmp_samples.csv", mode)
+	attributes_file = open("data/tmp_attributes.csv", mode)
+	types_file = open("data/tmp_types.csv", mode)
+	values_file = open("data/tmp_values.csv", mode)
+	ontology_file = open("data/tmp_ontologies.csv", mode)
+	has_attribute_file = open("data/tmp_has_attribute.csv", mode)
+	has_type_file = open("data/tmp_has_type.csv", mode)
+	has_value_file = open("data/tmp_has_value.csv", mode)
+	has_iri_file = open("data/tmp_has_iri.csv", mode)
 	all_files = [
 		samples_file, attributes_file, types_file, values_file, ontology_file,
 		has_attribute_file, has_type_file, has_value_file, has_iri_file
@@ -73,29 +73,31 @@ if __name__ == "__main__":
 	csv_has_ontology_writer.writerow([":START_ID(Attribute)", ":END_ID(OntologyTerm)"])
 
 	# Read annotations files and write output
-	file_number = 1
 	annotations_fields = ["accession", "attr_type", "attr_value", "onto_term"]
-	with open("data/biosamples-annotations-%d.csv" % file_number, 'r') as f:
-		print "Reading file #%d\n" % file_number
-		csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
-		csv_reader.next()  # skip first line
-		for line in csv_reader:
-			accession = line.get("accession")
-			attr_type = line.get("attr_type")
-			attr_value = line.get("attr_value")
-			onto_term = line.get("onto_term")
-			attr_key = "%s__%s__%s" % (attr_type, attr_value, onto_term)
+	file_number = 1
+	while os.path.isfile("data/biosamples-annotations-%d.csv" % file_number):
+		with open("data/biosamples-annotations-%d.csv" % file_number, 'r') as f:
+			print "Reading file #%d\n" % file_number
+			csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
+			csv_reader.next()  # skip first line
+			for line in csv_reader:
+				accession = line.get("accession")
+				attr_type = line.get("attr_type")
+				attr_value = line.get("attr_value")
+				onto_term = line.get("onto_term")
+				attr_key = "%s__%s__%s" % (attr_type, attr_value, onto_term)
 
-			csv_samples_writer.writerow([accession])
-			csv_attributes_writer.writerow([attr_key, attr_type, attr_value, onto_term])
-			csv_types_writer.writerow([attr_type])
-			csv_values_writer.writerow([attr_value])
-			csv_has_attribute_writer.writerow([accession, attr_key])
-			csv_has_type_writer.writerow([attr_key, attr_type])
-			csv_has_value_writer.writerow([attr_key, attr_value])
-			if onto_term != "":
-				csv_ontology_writer.writerow([onto_term])
-				csv_has_ontology_writer.writerow([attr_key, onto_term])
+				csv_samples_writer.writerow([accession])
+				csv_attributes_writer.writerow([attr_key, attr_type, attr_value, onto_term])
+				csv_types_writer.writerow([attr_type])
+				csv_values_writer.writerow([attr_value])
+				csv_has_attribute_writer.writerow([accession, attr_key])
+				csv_has_type_writer.writerow([attr_key, attr_type])
+				csv_has_value_writer.writerow([attr_key, attr_value])
+				if onto_term != "":
+					csv_ontology_writer.writerow([onto_term])
+					csv_has_ontology_writer.writerow([attr_key, onto_term])
+		file_number += 1
 
 	for f in files["all"]:
 		f.close()
