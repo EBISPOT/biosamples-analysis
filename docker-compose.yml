@@ -6,6 +6,13 @@ services:
       context: ./collate-attributes
     volumes:
       - ./data:/data
+
+  create-csv:
+    build: 
+      context: ./create-csv
+    volumes:
+      - ./data:/data
+      - ./output:/output
     
   neo4j-server:
     image: neo4j:latest

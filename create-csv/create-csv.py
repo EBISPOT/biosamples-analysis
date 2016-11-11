@@ -75,7 +75,7 @@ if __name__ == "__main__":
 	# Read annotations files and write output
 	file_number = 1
 	annotations_fields = ["accession", "attr_type", "attr_value", "onto_term"]
-	with open("biosamples-annotations-%d.csv" % file_number, 'r') as f:
+	with open("data/biosamples-annotations-%d.csv" % file_number, 'r') as f:
 		print "Reading file #%d\n" % file_number
 		csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
 		csv_reader.next()  # skip first line

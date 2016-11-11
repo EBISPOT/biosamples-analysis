@@ -12,3 +12,4 @@ The plan is to have 4 different docker containers:
 	neo-data to have a self-contained neo4j server with data inside
 
 docker-compose run collate-attributes
+docker-compose run create-csv
