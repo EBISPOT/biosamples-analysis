@@ -7,7 +7,7 @@ services:
     volumes:
       - ./data:/data
     
-  neo4j:
+  neo4j-server:
     image: neo4j:latest
     volumes:
       - ./data:/data
@@ -15,6 +15,7 @@ services:
       NEO4J_AUTH: none
     expose:
       - "7474"
+      - "7687"
     network_mode: "host"
     
     
