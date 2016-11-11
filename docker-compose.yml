@@ -1,11 +1,11 @@
 version: '2'
 
 services:
-  biosamples-metrics:
-    build: .
+  collate-attributes:
+    build: 
+      context: ./collate-attributes
     volumes:
       - ./data:/data
-    command: ["-n", "1000", "-o", "/data/metric.csv"]
     
   neo4j:
     image: neo4j:latest
