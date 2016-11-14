@@ -2,17 +2,6 @@ import csv
 import os
 
 
-def clear_output_folder():
-	dir_path = os.path.dirname(os.path.realpath(__file__))
-	output_path = os.path.join(dir_path, "output")
-	os.system("rm -f %s/*" % output_path)
-	# for f in os.listdir(output_path):
-	# 	try:
-	# 		os.unlink(os.path.join(output_path, f))
-	# 	except OSError as e:
-	# 		print e
-
-
 def get_files(mode="r"):
 	samples_file = open("data/tmp_samples.csv", mode)
 	attributes_file = open("data/tmp_attributes.csv", mode)
@@ -45,9 +34,6 @@ def get_files(mode="r"):
 if __name__ == "__main__":
 
 	print "CSV file creation process started\n"
-
-	print "Deleting output folder content\n"
-	clear_output_folder()
 
 	files = get_files("a")
 
@@ -117,7 +103,6 @@ if __name__ == "__main__":
 					seen.add(line)
 		f.close()
 
-	os.system("rm -f output/tmp_*.csv")
 
 
 

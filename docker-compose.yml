@@ -12,18 +12,17 @@ services:
       context: ./create-csv
     volumes:
       - ./data:/data
-      - ./output:/output
 
   populate-neo4j:
     build: 
       context: ./populate-neo4j
     volumes:
-      - ./output:/output
+      - ./data:/data
     
   neo4j-server:
     image: neo4j:3.0.6
     volumes:
-      - ./output/graph.db:/data/databases/graph.db
+      - ./data/graph.db:/data/databases/graph.db
     environment:
       NEO4J_AUTH: none
     ports:
