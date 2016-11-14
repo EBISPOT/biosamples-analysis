@@ -1,8 +1,6 @@
 import csv
 import os
 
-
-
 if __name__ == "__main__":
 
 	print "CSV file creation process started\n"

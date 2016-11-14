@@ -1,4 +1,5 @@
 *.csv
+.idea
 graph.db/
 load_env.sh
 
