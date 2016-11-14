@@ -5,7 +5,7 @@ import os
 def clear_output_folder():
 	dir_path = os.path.dirname(os.path.realpath(__file__))
 	output_path = os.path.join(dir_path, "output")
-	os.system("rm -f %s/*" % output_path)
+	os.system("rm -fr %s/*" % output_path)
 	# for f in os.listdir(output_path):
 	# 	try:
 	# 		os.unlink(os.path.join(output_path, f))
