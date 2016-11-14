@@ -1,5 +1,6 @@
 FROM python:2.7-alpine
 
 COPY create-csv.py /
+COPY create-csv.sh /
 
-ENTRYPOINT ["python", "/create-csv.py"]
+ENTRYPOINT ["sh", "/create-csv.sh"]

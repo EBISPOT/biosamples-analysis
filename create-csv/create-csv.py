@@ -2,112 +2,75 @@ import csv
 import os
 
 
-def get_files(mode="r"):
-	samples_file = open("data/tmp_samples.csv", mode)
-	attributes_file = open("data/tmp_attributes.csv", mode)
-	types_file = open("data/tmp_types.csv", mode)
-	values_file = open("data/tmp_values.csv", mode)
-	ontology_file = open("data/tmp_ontologies.csv", mode)
-	has_attribute_file = open("data/tmp_has_attribute.csv", mode)
-	has_type_file = open("data/tmp_has_type.csv", mode)
-	has_value_file = open("data/tmp_has_value.csv", mode)
-	has_iri_file = open("data/tmp_has_iri.csv", mode)
-	all_files = [
-		samples_file, attributes_file, types_file, values_file, ontology_file,
-		has_attribute_file, has_type_file, has_value_file, has_iri_file
-	]
-
-	return {
-		"samples": samples_file,
-		"attributes": attributes_file,
-		"types": types_file,
-		"values": values_file,
-		"ontologies": ontology_file,
-		"has_attribute": has_attribute_file,
-		"has_type": has_type_file,
-		"has_value": has_value_file,
-		"has_ontology": has_iri_file,
-		"all": all_files
-	}
-
 
 if __name__ == "__main__":
 
 	print "CSV file creation process started\n"
+	
+	with open("/data/tmp_samples.csv", "w") as samples_file:
+		with open("/data/tmp_attributes.csv", "w") as attributes_file:
+			with open("/data/tmp_types.csv", "w") as types_file:
+				with open("/data/tmp_values.csv", "w") as values_file:
+					with open("/data/tmp_ontologies.csv", "w") as ontology_file:
+						with open("/data/tmp_has_attribute.csv", "w") as has_attribute_file:
+							with open("/data/tmp_has_type.csv", "w") as has_type_file:
+								with open("/data/tmp_has_value.csv", "w") as has_value_file:
+									with open("/data/tmp_has_iri.csv", "w") as has_iri_file:
 
-	files = get_files("a")
+										csv_samples_writer = csv.writer(samples_file, delimiter=",")
+										csv_attributes_writer = csv.writer(attributes_file, delimiter=",")
+										csv_types_writer = csv.writer(types_file, delimiter=",")
+										csv_values_writer = csv.writer(values_file, delimiter=",")
+										csv_ontology_writer = csv.writer(ontology_file, delimiter=",")
+										csv_has_attribute_writer = csv.writer(has_attribute_file, delimiter=",")
+										csv_has_type_writer = csv.writer(has_type_file, delimiter=",")
+										csv_has_value_writer = csv.writer(has_value_file, delimiter=",")
+										csv_has_ontology_writer = csv.writer(has_iri_file, delimiter=",")
 
-	csv_samples_writer = csv.writer(files["samples"], delimiter=",")
-	csv_attributes_writer = csv.writer(files["attributes"], delimiter=",")
-	csv_types_writer = csv.writer(files["types"], delimiter=",")
-	csv_values_writer = csv.writer(files["values"], delimiter=",")
-	csv_ontology_writer = csv.writer(files["ontologies"], delimiter=",")
-	csv_has_attribute_writer = csv.writer(files["has_attribute"], delimiter=",")
-	csv_has_type_writer = csv.writer(files["has_type"], delimiter=",")
-	csv_has_value_writer = csv.writer(files["has_value"], delimiter=",")
-	csv_has_ontology_writer = csv.writer(files["has_ontology"], delimiter=",")
+										# Write headers
+										csv_samples_writer.writerow(["accession:ID(Sample)"])
+										csv_attributes_writer.writerow(["attributeId:ID(Attribute)", "type", "value", "iri"])
+										csv_types_writer.writerow(["attributeTypeId:ID(AttributeType)"])
+										csv_values_writer.writerow(["attributeValueId:ID(AttributeValue)"])
+										csv_ontology_writer.writerow(["ontologyIri:ID(OntologyTerm)"])
+										csv_has_attribute_writer.writerow([":START_ID(Sample)", ":END_ID(Attribute)"])
+										csv_has_type_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeType)"])
+										csv_has_value_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeValue)"])
+										csv_has_ontology_writer.writerow([":START_ID(Attribute)", ":END_ID(OntologyTerm)"])
 
-	# Write headers
-	csv_samples_writer.writerow(["accession:ID(Sample)"])
-	csv_attributes_writer.writerow(["attributeId:ID(Attribute)", "type", "value", "iri"])
-	csv_types_writer.writerow(["attributeTypeId:ID(AttributeType)"])
-	csv_values_writer.writerow(["attributeValueId:ID(AttributeValue)"])
-	csv_ontology_writer.writerow(["ontologyIri:ID(OntologyTerm)"])
-	csv_has_attribute_writer.writerow([":START_ID(Sample)", ":END_ID(Attribute)"])
-	csv_has_type_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeType)"])
-	csv_has_value_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeValue)"])
-	csv_has_ontology_writer.writerow([":START_ID(Attribute)", ":END_ID(OntologyTerm)"])
+										# Read annotations files and write output
+										annotations_fields = ["accession", "attr_type", "attr_value", "onto_term"]
+										file_number = 1
+										while os.path.isfile("/data/biosamples-annotations-%d.csv" % file_number):
+											with open("/data/biosamples-annotations-%d.csv" % file_number, 'r') as f:
+												print "Reading file #%d\n" % file_number
+												csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
+												csv_reader.next()  # skip first line because its the header
+												for line in csv_reader:
+													accession = line.get("accession")
+													attr_type = line.get("attr_type")
+													attr_value = line.get("attr_value")
+													onto_term = line.get("onto_term")
+													attr_key = "%s__%s__%s" % (attr_type, attr_value, onto_term)
 
-	# Read annotations files and write output
-	annotations_fields = ["accession", "attr_type", "attr_value", "onto_term"]
-	file_number = 1
-	while os.path.isfile("data/biosamples-annotations-%d.csv" % file_number):
-		with open("data/biosamples-annotations-%d.csv" % file_number, 'r') as f:
-			print "Reading file #%d\n" % file_number
-			csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
-			csv_reader.next()  # skip first line
-			for line in csv_reader:
-				accession = line.get("accession")
-				attr_type = line.get("attr_type")
-				attr_value = line.get("attr_value")
-				onto_term = line.get("onto_term")
-				attr_key = "%s__%s__%s" % (attr_type, attr_value, onto_term)
-
-				csv_samples_writer.writerow([accession])
-				csv_attributes_writer.writerow([attr_key, attr_type, attr_value, onto_term])
-				csv_types_writer.writerow([attr_type])
-				csv_values_writer.writerow([attr_value])
-				csv_has_attribute_writer.writerow([accession, attr_key])
-				csv_has_type_writer.writerow([attr_key, attr_type])
-				csv_has_value_writer.writerow([attr_key, attr_value])
-				if onto_term != "":
-					csv_ontology_writer.writerow([onto_term])
-					csv_has_ontology_writer.writerow([attr_key, onto_term])
-		file_number += 1
-
-	for f in files["all"]:
-		f.close()
-
-	files = get_files()
-
-	print "Evaluate unique nodes/relationships\n"
-	for f in files["all"]:
-		f.seek(0)
-		seen = set()
-		old_name = f.name
-		final_name = old_name.replace("tmp_", "")
-		with open(final_name, "w") as out:
-			for line in f:
-				if line not in seen:
-					out.write(line)
-					seen.add(line)
-		f.close()
-
-
-
-
-
-
-
-
+													#check and filter out things with zero length
+													#because they will break Neo4J import
+													if len(attr_type.strip()) == 0:
+														continue
+													if len(attr_value.strip()) == 0:
+														continue
+													
+													csv_samples_writer.writerow([accession])
+													csv_attributes_writer.writerow([attr_key, attr_type, attr_value, onto_term])
+													csv_types_writer.writerow([attr_type])
+													csv_values_writer.writerow([attr_value])
+													csv_has_attribute_writer.writerow([accession, attr_key])
+													csv_has_type_writer.writerow([attr_key, attr_type])
+													csv_has_value_writer.writerow([attr_key, attr_value])
+													#ontology terms are optional
+													if len(onto_term.strip()) != 0:
+														csv_ontology_writer.writerow([onto_term])
+														csv_has_ontology_writer.writerow([attr_key, onto_term])
+														
+											file_number += 1
 
