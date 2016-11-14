@@ -20,11 +20,22 @@ services:
       - ./data:/data
     
   neo4j-server:
-    image: neo4j:3.0.6
-    volumes:
-      - ./data/graph.db:/data/databases/graph.db
+    build: 
+      context: .
+      dockerfile: ./neo4j-server/Dockerfile
+    image: biosamples:neo4j-server
     environment:
-      NEO4J_AUTH: none
+        NEO4J_AUTH: none
+    ports:
+        - "7474:7474"
+    
+  neo4j-server-test:
+    image: neo4j:3.0.6
+    environment:
+        NEO4J_AUTH: none
+        NEO4J_HOME: /biosamples/data
+    volumes:
+      - ./data:/data
     ports:
         - "7474:7474"
     
