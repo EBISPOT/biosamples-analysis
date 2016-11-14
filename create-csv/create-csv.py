@@ -75,4 +75,5 @@ if __name__ == "__main__":
 													if line_num % 1000 == 0:
 														sys.stdout.write(".")
 														sys.stdout.flush()
+													line_num += 1
 											file_number += 1
