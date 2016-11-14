@@ -30,7 +30,7 @@ services:
     
     
 #allowing docker-compose to create a new network can break internal connectivty on host  
-networks:
-  default:
-    external:
-      name: bridge
+#networks:
+#  default:
+#    external:
+#      name: bridge
