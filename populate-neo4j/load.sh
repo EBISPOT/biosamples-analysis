@@ -5,7 +5,7 @@ NEO4J_DATA=/data
 
 # Clean any existing content
 echo "Removing any existing content at $NEO4J_DATA/graph.db.tmp"
-rm -rf "$NEO4J_DATA"/graph.db.tmp
+rm -rf "$NEO4J_DATA"/databases/graph.db.tmp
 
 # Create the new content
 echo "Creating new database..."
@@ -22,10 +22,10 @@ time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 10000 --into "$NEO4J_DATA/gr
 
 # Create indexes
 echo "Creating indexes..."
-time nice "$NEO4J_BIN"/neo4j-shell -path "$NEO4J_DATA"/graph.db.tmp -file /indexes.cypher
+time nice "$NEO4J_BIN"/neo4j-shell -path "$NEO4J_DATA"/databases/graph.db.tmp -file /indexes.cypher
 
 # Replace graph
-rm -rf "$NEO4J_DATA"/graph.db
-mv "$NEO4J_DATA"/graph.db.tmp "$NEO4J_DATA"/graph.db
+rm -rf "$NEO4J_DATA"/databases/graph.db
+mv "$NEO4J_DATA"/databases/graph.db.tmp "$NEO4J_DATA"/databases/graph.db
 
 echo "All Done!"

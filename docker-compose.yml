@@ -28,16 +28,17 @@ services:
         NEO4J_AUTH: none
     ports:
         - "7474:7474"
+        - "7687:7687"
     
-  neo4j-server-test:
+  neo4j-server-local:
     image: neo4j:3.0.6
     environment:
         NEO4J_AUTH: none
-        NEO4J_HOME: /biosamples/data
     volumes:
       - ./data:/data
     ports:
         - "7474:7474"
+        - "7687:7687"
     
     
 #allowing docker-compose to create a new network can break internal connectivty on host  
