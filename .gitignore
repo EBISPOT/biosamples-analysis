@@ -4,3 +4,4 @@ graph.db/
 load_env.sh
 *.tar.gz
 TEST
+analysis
