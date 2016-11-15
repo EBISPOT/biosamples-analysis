@@ -9,7 +9,7 @@ rm -rf "$NEO4J_DATA"/databases/graph.db.tmp
 
 # Create the new content
 echo "Creating new database..."
-time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 10000 --into "$NEO4J_DATA/graph.db.tmp" --i-type string \
+time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 10000 --into "$NEO4J_DATA"/databases/graph.db.tmp --i-type string \
         --nodes:Sample "$NEO4J_DATA/samples.csv" \
         --nodes:Attribute "$NEO4J_DATA/attributes.csv" \
         --nodes:AttributeType "$NEO4J_DATA/types.csv" \
