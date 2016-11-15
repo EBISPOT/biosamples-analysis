@@ -1,10 +1,11 @@
 import csv
 import os
+import sys
 
 if __name__ == "__main__":
 
 	print "CSV file creation process started\n"
-	
+
 	with open("/data/tmp_samples.csv", "w") as samples_file:
 		with open("/data/tmp_attributes.csv", "w") as attributes_file:
 			with open("/data/tmp_types.csv", "w") as types_file:
@@ -41,9 +42,11 @@ if __name__ == "__main__":
 										file_number = 1
 										while os.path.isfile("/data/biosamples-annotations-%d.csv" % file_number):
 											with open("/data/biosamples-annotations-%d.csv" % file_number, 'r') as f:
-												print "Reading file #%d\n" % file_number
+												sys.stdout.write("Reading file #%d\n" % file_number)
+												sys.stdout.flush()
 												csv_reader = csv.DictReader(f, delimiter=",", fieldnames=annotations_fields)
 												csv_reader.next()  # skip first line because its the header
+												line_num = 0
 												for line in csv_reader:
 													accession = line.get("accession")
 													attr_type = line.get("attr_type")
@@ -69,6 +72,8 @@ if __name__ == "__main__":
 													if len(onto_term.strip()) != 0:
 														csv_ontology_writer.writerow([onto_term])
 														csv_has_ontology_writer.writerow([attr_key, onto_term])
-														
+													if line_num % 1000 == 0:
+														sys.stdout.write(".")
+														sys.stdout.flush()
+													line_num += 1
 											file_number += 1
-
