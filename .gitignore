@@ -2,5 +2,5 @@
 .idea
 graph.db/
 load_env.sh
-
-biosamples-attribute-annotations.tar.gz
+*.tar.gz
+TEST
