@@ -36,7 +36,8 @@ services:
     environment:
         NEO4J_AUTH: none
     volumes:
-        - ./data:/var/lib/neo4j/data/databases
+        - ./data/databases:/var/lib/neo4j/data/databases
+        - ./neo4j-server-local/conf:/var/lib/neo4j/conf
     ports:
         - "7474:7474"
         - "7687:7687"
