@@ -5,7 +5,7 @@ import csv
 import matplotlib
 import wordcloud
 
-#pip install neo4j-driver wordcloud matplotlib pillow 
+#pip install neo4j-driver wordcloud matplotlib pillow image
 
 
 if __name__ == "__main__":

@@ -7,3 +7,4 @@ load_env.sh
 *.tar.gz
 TEST
 analysis
+neo4j-analysis/neo4j-analysis/
