@@ -59,7 +59,6 @@ def generate_wordcloud(db_driver):
 	common = get_most_common_attributes(db_driver, 10)
 	for attr in common:
 		i = 0
-			
 		freq.append((attr[0], attr[1]))
 		if i < 25:
 			i += 1
@@ -81,7 +80,7 @@ def generate_wordcloud(db_driver):
 			print "generated wordcloud of values of", attr[0]
 		wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq)
 		wc.recolor(color_func=grey_color_func, random_state=3)
-		wc.to_file("word_clouds/cloud-types.png")		
+		wc.to_file("word_clouds/cloud-types.png")
 	print "generated wordcloud of most common attribute types and values"
 
 
