@@ -18,7 +18,7 @@ def get_most_common_attributes(db_driver, n_attributes):
 	with db_driver.session() as session:
 		results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-->(t:AttributeType) "
 		                      "WITH t, COUNT(s) AS usage_count "
-		                      "RETURN t.attributeTypeId as type, usage_count "
+		                      "RETURN t.name as type, usage_count "
 		                      "ORDER BY usage_count DESC "
 		                      "LIMIT %d" % n_attributes)
 		for record in results:
@@ -74,10 +74,10 @@ def generate_wordcloud(db_driver):
 						"LIMIT 1000"
 					results2 = session2.run(cypher)
 					for result2 in results2:
-						freq2.append((result2["value"],result2["usage_count"]))
+						freq2.append((result2["value"], result2["usage_count"]))
 				wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq2)
 				wc.recolor(color_func=grey_color_func, random_state=3)
-				wc.to_file("cloud-values-{}.png".format(result["a.type"]))
+				wc.to_file("word_clouds/cloud-values-{}.png".format(result["a.type"]))
 				print "generated wordcloud of values of", result["a.type"]
 		wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq).to_file("cloud-types.png")
 	print "generated wordcloud of most common attribute types and values"
@@ -86,19 +86,21 @@ def generate_wordcloud(db_driver):
 def attribute_values_mapped(db_driver):
 
 	print "generating the list with the percentage of attributes values mapped to ontology term"
-	common_attrs = get_most_common_attributes(db_driver, 10)
-	limit_results = 10
-	for attr in common_attrs:
-		cypher = "MATCH (s:Sample)-->(a:Attribute{type: \"%s\"})-->(ot:OntologyTerm) " \
-                 "RETURN s.accession AS Sample, " \
-		         "COUNT(a) AS Attributes, " \
-		         "COUNT(ot) AS AttributesMapped, " \
-		         "COUNT(ot)/COUNT(a) AS Ratio " \
-                 "ORDER BY Attributes DESC LIMIT %d" % (attr, limit_results)
-		with db_driver.session() as session:
-			results = session.run(cypher)
-			for record in results:
-				print record
+	with open("perc_attr_mapped.csv", "w") as outfile:
+		csvout = csv.writer(outfile)
+
+		common_attrs = get_most_common_attributes(db_driver, 100)
+		for attr in common_attrs:
+			cypher = "MATCH (s:Sample)-->(a:Attribute{type: \"%s\"}) " \
+					 "RETURN COUNT(s) AS samples, " \
+					 "COUNT(a.iri) AS mapped " % attr
+			with db_driver.session() as session:
+				result = session.run(cypher)
+				for record in result:
+					row = [str(attr), round(float(record["mapped"])*100/record["samples"], 2)]
+					print row
+					csvout.writerow(row)
+				# print "%s: Ratio=%.2f" % (attr, float(record["mapped"])/record["samples"])
 
 
 if __name__ == "__main__":

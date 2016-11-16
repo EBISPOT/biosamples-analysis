@@ -28,10 +28,10 @@ if __name__ == "__main__":
 
 										# Write headers
 										csv_samples_writer.writerow(["accession:ID(Sample)"])
-										csv_attributes_writer.writerow(["attributeId:ID(Attribute)", "type", "value", "iri"])
-										csv_types_writer.writerow(["attributeTypeId:ID(AttributeType)"])
-										csv_values_writer.writerow(["attributeValueId:ID(AttributeValue)"])
-										csv_ontology_writer.writerow(["ontologyIri:ID(OntologyTerm)"])
+										csv_attributes_writer.writerow(["id:ID(Attribute)", "type", "value", "iri"])
+										csv_types_writer.writerow(["name:ID(AttributeType)"])
+										csv_values_writer.writerow(["name:ID(AttributeValue)"])
+										csv_ontology_writer.writerow(["iri:ID(OntologyTerm)"])
 										csv_has_attribute_writer.writerow([":START_ID(Sample)", ":END_ID(Attribute)"])
 										csv_has_type_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeType)"])
 										csv_has_value_writer.writerow([":START_ID(Attribute)", ":END_ID(AttributeValue)"])
