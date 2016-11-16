@@ -33,19 +33,19 @@ def generate_spreadsheet(db_driver):
 		csvout = csv.writer(outfile)
 
 		with db_driver.session() as session:
-			results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-->(t:AttributeType) WITH t, COUNT(s) AS usage_count RETURN t.attributeTypeId as type, usage_count ORDER BY usage_count DESC LIMIT 100")
+			results = session.run("MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType) WITH a.type AS type, COUNT(s) AS usage_count RETURN type, usage_count ORDER BY usage_count DESC LIMIT 100")
 			for result in results:
 				print "{} ({})".format(result["type"], result["usage_count"])
 
 				row = ["{} ({})".format(result["type"], result["usage_count"])]
 
 				with db_driver.session() as session2:
-					cypher = "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{attributeTypeId:'"+str(result["type"])+"'}), (a:Attribute)-->(v:AttributeValue) WITH t,v,COUNT(s) AS usage_count RETURN t.attributeTypeId AS type, v.attributeValueId AS value, usage_count ORDER BY usage_count DESC LIMIT 10"
+					cypher = "MATCH (s:Sample)-->(a:Attribute{type:'" + str(result["type"]) + "'})-->(v:AttributeValue) WITH v,COUNT(s) AS usage_count RETURN v.attributeValueId AS value, usage_count ORDER BY usage_count DESC LIMIT 10"
 					print cypher
 					results2 = session2.run(cypher)
 					for result2 in results2:
 						row.append("{} ({})".format(result2["value"], result2["usage_count"]))
-						print "{} | {} ({})".format(result2["type"], result2["value"], result2["usage_count"])
+						print "{} ({})".format(result2["value"], result2["usage_count"])
 
 				csvout.writerow(row)
 
@@ -57,19 +57,19 @@ def generate_wordcloud(db_driver):
 	print "generating wordcloud of most common attribute types and values"
 	freq = []
 	with db_driver.session() as session:
-		results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-->(t:AttributeType) WITH t, COUNT(s) AS usage_count RETURN t.attributeTypeId as type, usage_count ORDER BY usage_count DESC LIMIT 1000")
+		results = session.run("MATCH (s:Sample)-->(a:Attribute) WITH a,COUNT(s) AS usage_count RETURN a.type, usage_count ORDER BY usage_count DESC LIMIT 1000")
 		i = 0
 		for result in results:
-			freq.append((result["type"], result["usage_count"]))
+			freq.append((result["a.type"], result["usage_count"]))
 			if i < 25:
 				i += 1
-				print "generating wordcloud of values of", result["type"]
+				print "generating wordcloud of values of", result["a.type"]
 				freq2 = []
 				with db_driver.session() as session2:
 					cypher = \
-						"MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{attributeTypeId:'" + str(result["type"]) + "'}), (a:Attribute)-->(v:AttributeValue) " \
-						"WITH t,v,COUNT(s) AS usage_count " \
-						"RETURN t.attributeTypeId AS type, v.attributeValueId AS value, usage_count " \
+						"MATCH (s:Sample)-->(a:Attribute{type:'" + str(result["a.type"]) + "'}) " \
+						"WITH a,COUNT(s) AS usage_count " \
+						"RETURN a.value AS value, usage_count " \
 						"ORDER BY usage_count DESC " \
 						"LIMIT 1000"
 					results2 = session2.run(cypher)
@@ -77,8 +77,8 @@ def generate_wordcloud(db_driver):
 						freq2.append((result2["value"],result2["usage_count"]))
 				wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq2)
 				wc.recolor(color_func=grey_color_func, random_state=3)
-				wc.to_file("cloud-values-{}.png".format(result["type"]))
-				print "generated wordcloud of values of", result["type"]
+				wc.to_file("cloud-values-{}.png".format(result["a.type"]))
+				print "generated wordcloud of values of", result["a.type"]
 		wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq).to_file("cloud-types.png")
 	print "generated wordcloud of most common attribute types and values"
 
@@ -106,10 +106,10 @@ if __name__ == "__main__":
 	driver = GraphDatabase.driver("bolt://localhost", auth=basic_auth("neo4j", "password"))
 	
 	# spreadsheet of most common attribute types and values
-	# generate_spreadsheet(driver)
+	#generate_spreadsheet(driver)
 	
 	# wordcloud of most common attribute types and values
-	# generate_wordcloud(driver)
+	generate_wordcloud(driver)
 
 	# Percentage of attribute values mapped to ontology for each attribute type
 	attribute_values_mapped(driver)
