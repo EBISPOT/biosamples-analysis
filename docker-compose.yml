@@ -36,11 +36,12 @@ services:
     environment:
         NEO4J_AUTH: none
     volumes:
-        - ./data/databases:/var/lib/neo4j/data/databases
-        - ./neo4j-server-local/conf:/var/lib/neo4j/conf
+        - ./data:/data
+        - ./neo4j-server-local/conf:/conf
     ports:
         - "7474:7474"
         - "7687:7687"
+#    command: dump-config
     
     
 #allowing docker-compose to create a new network can break internal connectivty on host  

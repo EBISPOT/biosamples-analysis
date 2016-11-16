@@ -7,12 +7,13 @@ import wordcloud
 import random
 
 
-
 def grey_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
 	return "hsl(%d, 100%%, 100%%)" % random.randint(120, 160)
 
 
 def get_most_common_attributes(db_driver, n_attributes):
+
+	print 'Querying database for the %d most common attributes' % n_attributes
 	attr_types = []
 	with db_driver.session() as session:
 		results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-->(t:AttributeType) "
@@ -85,8 +86,19 @@ def generate_wordcloud(db_driver):
 def attribute_values_mapped(db_driver):
 
 	print "generating the list with the percentage of attributes values mapped to ontology term"
-	common_attrs = get_most_common_attributes(db_driver, 100)
-
+	common_attrs = get_most_common_attributes(db_driver, 10)
+	limit_results = 10
+	for attr in common_attrs:
+		cypher = "MATCH (s:Sample)-->(a:Attribute{type: \"%s\"})-->(ot:OntologyTerm) " \
+                 "RETURN s.accession AS Sample, " \
+		         "COUNT(a) AS Attributes, " \
+		         "COUNT(ot) AS AttributesMapped, " \
+		         "COUNT(ot)/COUNT(a) AS Ratio " \
+                 "ORDER BY Attributes DESC LIMIT %d" % (attr, limit_results)
+		with db_driver.session() as session:
+			results = session.run(cypher)
+			for record in results:
+				print record
 
 
 if __name__ == "__main__":
@@ -100,6 +112,4 @@ if __name__ == "__main__":
 	# generate_wordcloud(driver)
 
 	# Percentage of attribute values mapped to ontology for each attribute type
-	attributes = get_most_common_attributes(driver, 10)
-	for attr in attributes:
-		print attr
+	attribute_values_mapped(driver)
