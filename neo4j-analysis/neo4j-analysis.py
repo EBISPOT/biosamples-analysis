@@ -79,7 +79,7 @@ def generate_wordcloud(db_driver):
 				wc.recolor(color_func=grey_color_func, random_state=3)
 				wc.to_file("word_clouds/cloud-values-{}.png".format(result["a.type"]))
 				print "generated wordcloud of values of", result["a.type"]
-		wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq).to_file("cloud-types.png")
+		wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=1000).generate_from_frequencies(freq).to_file("word_clouds/cloud-types.png")
 	print "generated wordcloud of most common attribute types and values"
 
 
