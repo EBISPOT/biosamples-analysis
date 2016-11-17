@@ -2,6 +2,8 @@
 
 python /create-csv.py
 
+echo "Completed generating tmp files"
+
 cat /data/tmp_attributes.csv | head -n 1 > /data/attributes.csv
 cat /data/tmp_has_attribute.csv | head -n 1 > /data/has_attribute.csv
 cat /data/tmp_has_iri.csv | head -n 1 > /data/has_iri.csv
