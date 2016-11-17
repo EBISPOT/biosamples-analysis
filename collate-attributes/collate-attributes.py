@@ -9,7 +9,6 @@ import argparse
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 all_cap_re = re.compile('([a-z0-9])([A-Z])')
-characteristic_re = re.compile('_crt_json')
 
 
 class Annotation:
@@ -32,7 +31,22 @@ def count_results(content):
 
 
 def convert(name):
-    return inflection.titleize(inflection.underscore(name))
+    #given a string like "geographicLocation" return "Geographic Location"
+    
+    spaced = True
+    out = ""
+    for c in name:
+        if spaced:
+            out = out + c.upper()
+            spaced = False
+        elif c.isupper():
+            out = out + " " +c.upper()
+        else:
+            out = out + c
+            
+    return out
+    
+    #return inflection.titleize(name)
 
 
 def parse_response(content):
@@ -41,9 +55,10 @@ def parse_response(content):
     for doc in docs:
         accession = doc['accession'].encode('utf-8')
         for key in doc:
-            if characteristic_re.search(key) is not None:
+            if key.encode('utf-8').endswith("_crt_json"):
                 # remove postamble '_crt_json' from key and capitaliza/whitespace
-                attribute_type = convert(characteristic_re.sub('', key)).encode('utf-8')
+                attribute_type = convert(key.encode('utf-8').replace("_crt_json",""))
+                #print accession, key, attribute_type
 
                 # unpack attribute value and ontology terms
                 attribute_contents = doc[key]
@@ -96,7 +111,10 @@ def main(argv):
 
     baseurl = 'http://'+args.hostname+'/solr/samples/select?q=*%3A*&fl=accession%2C*_crt_json&wt=json&indent=true'
 
-    print "Starting to evaluate annotations in BioSamples (doing " + str(args.numberofrows) + " samples at a time)"
+    print "Starting to evaluate annotations in BioSamples"
+    print "starting from", args.startrow
+    print "reading", args.numberofrows, "samples at a time from ", args.hostname
+    print "writing ", args.blocksize, "samples per file"
 
     # Execute request to get documents
     initial_response = requests.get(baseurl)
