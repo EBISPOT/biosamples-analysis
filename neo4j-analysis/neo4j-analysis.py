@@ -18,7 +18,7 @@ def get_most_common_attributes(db_driver, n_attributes):
 	with db_driver.session() as session:
 		results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-->(t:AttributeType) "
 		                      "WITH t, COUNT(s) AS usage_count "
-		                      "RETURN t.attributeTypeId AS type, usage_count "
+		                      "RETURN t.name AS type, usage_count "
 		                      "ORDER BY usage_count DESC "
 		                      "LIMIT %d" % n_attributes)
 		for result in results:
@@ -39,8 +39,8 @@ def generate_spreadsheet(db_driver):
 			row = ["{} ({})".format(attr[0], attr[1])]
 
 			with db_driver.session() as session2:
-				cypher = "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{attributeTypeId:'"+attr[0]+"'}), (a:Attribute)-->(v:AttributeValue) RETURN v.attributeValueId AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT 10"
-				print cypher
+				cypher = "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), (a:Attribute)-->(v:AttributeValue) RETURN v.name AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT 10"
+				#print cypher
 				results2 = session2.run(cypher)
 				for result2 in results2:
 					row.append("{} ({})".format(result2["value"], result2["usage_count"]))
@@ -56,21 +56,17 @@ def generate_wordcloud(db_driver):
 	print "generating wordcloud of most common attribute types and values"
 	freq = []
 	
-	common = get_most_common_attributes(db_driver, 10)
+	common = get_most_common_attributes(db_driver, 1000)
 	for attr in common:
 		i = 0
 		freq.append((attr[0], attr[1]))
-		if i < 25:
+		if i < 10:
 			i += 1
 			print "generating wordcloud of values of", attr[0]
 			freq2 = []
 			with db_driver.session() as session2:
 				cypher = \
-					"MATCH (s:Sample)-->(a:Attribute{type:'" + str(attr[0]) + "'}) " \
-					"WITH a,COUNT(s) AS usage_count " \
-					"RETURN a.value AS value, usage_count " \
-					"ORDER BY usage_count DESC " \
-					"LIMIT 1000"
+					"MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), (a:Attribute)-->(v:AttributeValue) RETURN v.name AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT 1000"
 				results2 = session2.run(cypher)
 				for result2 in results2:
 					freq2.append((result2["value"], result2["usage_count"]))
@@ -110,7 +106,7 @@ if __name__ == "__main__":
 	driver = GraphDatabase.driver("bolt://localhost", auth=basic_auth("neo4j", "password"))
 	
 	# spreadsheet of most common attribute types and values
-	#generate_spreadsheet(driver)
+	generate_spreadsheet(driver)
 	
 	# wordcloud of most common attribute types and values
 	generate_wordcloud(driver)
