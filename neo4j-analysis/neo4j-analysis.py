@@ -101,15 +101,42 @@ def attribute_values_mapped(db_driver):
 				# print "%s: Ratio=%.2f" % (attr, float(record["mapped"])/record["samples"])
 
 
+def attribute_value_coverage(db_driver):
+	
+	print "generating coverage stats"
+	prop = 0.75
+	maxcount = 100
+	
+	common_attrs = get_most_common_attributes(db_driver, 100)
+	for attr in common_attrs:
+		cypher = "MATCH (s:Sample)--(a:Attribute)--(t:AttributeType{name:'"+attr[0]+"'}), (a)--(v:AttributeValue) RETURN v.name, count(s) AS count_s ORDER BY count(s) DESC"
+		#print cypher
+		with db_driver.session() as session:
+			result = session.run(cypher)
+			running_total = 0
+			i = 0
+			for record in result:
+				i += 1
+				running_total += record["count_s"]
+				#print attr[1], float(attr[1])*prop, running_total, record["count_s"]
+				if running_total > float(attr[1])*prop:
+					print "for type",attr[0],"the top",i,"values cover",int(prop*100.0),"% of samples"
+					break
+				if i >= maxcount:
+					print "for type",attr[0],"the top",maxcount,"values do not cover",int(prop*100.0),"% of samples"
+	
 if __name__ == "__main__":
 	
 	driver = GraphDatabase.driver("bolt://localhost", auth=basic_auth("neo4j", "password"))
 	
 	# spreadsheet of most common attribute types and values
-	generate_spreadsheet(driver)
+	#generate_spreadsheet(driver)
 	
 	# wordcloud of most common attribute types and values
-	generate_wordcloud(driver)
+	#generate_wordcloud(driver)
 
 	# Percentage of attribute values mapped to ontology for each attribute type
-	attribute_values_mapped(driver)
+	#attribute_values_mapped(driver)
+	
+	# top N values to cover P proportion of samples
+	attribute_value_coverage(driver)
