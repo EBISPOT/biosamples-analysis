@@ -122,6 +122,7 @@ def attribute_value_coverage(db_driver):
 					break
 				if i >= maxcount:
 					print "for type",attr[0],"the top",maxcount,"values do not cover",int(prop*100.0),"% of samples"
+					break
 
 	
 def number_of_attributes_ditribution(db_driver, show_graph):
@@ -214,7 +215,7 @@ def main_func(db_driver, graph):
 	# number_of_attributes_ditribution(driver, show_graph)
 
 	# Number of attribute values per attribute type
-	number_of_values_per_type(db_driver, graph)
+	# number_of_values_per_type(db_driver, graph)
 
 	# top N values to cover P proportion of samples
 	attribute_value_coverage(driver)
