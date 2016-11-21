@@ -28,6 +28,7 @@ services:
     environment:
         NEO4J_AUTH: none
     ports:
+        - "7473:7473"
         - "7474:7474"
         - "7687:7687"
     
@@ -39,13 +40,17 @@ services:
         - ./data:/data
         - ./neo4j-server-local/conf:/conf
     ports:
+        - "7473:7473"
         - "7474:7474"
         - "7687:7687"
 #    command: dump-config
     
     
 #allowing docker-compose to create a new network can break internal connectivty on host  
-#networks:
-#  default:
-#    external:
-#      name: bridge
+networks:
+  #need to move default network to a different subnet to avoid conflict with local subnet
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
