@@ -112,6 +112,7 @@ def main(argv):
     baseurl = 'http://'+args.hostname+'/solr/samples/select?q=*%3A*&fl=accession%2C*_crt_json&wt=json&indent=true'
 
     print "Starting to evaluate annotations in BioSamples"
+    print "base URL is "+baseurl
     print "starting from", args.startrow
     print "reading", args.numberofrows, "samples at a time from ", args.hostname
     print "writing ", args.blocksize, "samples per file"
