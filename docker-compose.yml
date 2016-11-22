@@ -41,8 +41,9 @@ services:
       - ./neo4j-analysis:/neo4j-analysis
     depends_on:
       - neo4j-server-local
-    environment:
-      - DISPLAY
+    entrypoint:
+      - python 
+      - neo4j-analysis/neo4j-analysis.py
     
     
 #allowing docker-compose to create a new network can break internal connectivty on host  
