@@ -48,7 +48,6 @@ def get_parents(term_content):
 	parents = []
 	if "hierarchicalParents" in term_content["_links"]:
 		parent_url = term_content["_links"]["hierarchicalParents"]["href"]
-		print parent_url
 		pres = requests.get(parent_url)
 
 		if pres.status_code == 200:
@@ -108,10 +107,10 @@ def main(argv):
 					n_element += 1
 					iri = term["iri"].encode("utf-8")
 					if term["synonyms"]:
-						synonyms = [s.encode("utf-8") for s in term["synonyms"]]
+						synonyms = [s.strip().encode("utf-8") for s in term["synonyms"]]
 					else:
 						synonyms = []
-					label = term["label"].encode("utf-8")
+					label = term["label"].encode("utf-8").strip()
 					is_obsolete = term["is_obsolete"]
 					term_parents = get_parents(term)
 
