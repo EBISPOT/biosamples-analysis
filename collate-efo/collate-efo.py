@@ -17,21 +17,31 @@ class OntologyTerm:
 
 
 def write_results(results, block, ontology):
-	filename = "data/{}-terms-{:03d}.csv".format(ontology, block)
+	term_file = "data/{}-terms-{:03d}.csv".format(ontology, block)
+	parent_file = "data/{}-parents-{:03d}.csv".format(ontology, block)
 
-	filename = os.path.abspath(filename)
-	if not os.path.exists(os.path.dirname(filename)):
-		os.makedirs(os.path.dirname(filename))
+	term_file = os.path.abspath(term_file)
+	parent_file = os.path.abspath(parent_file)
+	if not os.path.exists(os.path.dirname(term_file)):
+		os.makedirs(os.path.dirname(term_file))
 
-	if not os.path.exists(filename):
-		with open(filename, 'w') as f:
-			writer = unicodecsv.writer(f, delimiter=",")
-			writer.writerow(["IRI", "LABEL", "SYNONYMS[]", "PARENTS[]", "OBSOLETE"])
+	if not os.path.exists(term_file):
+		with open(term_file, 'w') as f:
+			term_writer = unicodecsv.writer(f, delimiter=",")
+			term_writer.writerow(["iri:ID(EfoOntologyTerm)", "label", "synonyms[]", "parents[]", "obsolete"])
+	if not os.path.exists(parent_file):
+		with open(parent_file, 'w') as f:
+			parent_writer = unicodecsv.writer(f, delimiter=",")
+			parent_writer.writerow([":START_ID(EfoOntologyTerm)", ":END_ID(EfoOntologyTerm)"])
 
-	with open(filename, 'a') as f:
-		writer = unicodecsv.writer(f, delimiter=",")
-		for result in results:
-			writer.writerow([result.iri, result.label, ";".join(result.synonyms), ";".join(result.parents), result.is_obsolete])
+	with open(term_file, 'a') as f:
+		with open(parent_file, 'a') as p:
+			term_writer = unicodecsv.writer(f, delimiter=",")
+			parent_writer = unicodecsv.writer(p, delimiter=",")
+			for result in results:
+				term_writer.writerow([result.iri, result.label, ";".join(result.synonyms), ";".join(result.parents), result.is_obsolete])
+				for parent in result.parents:
+					parent_writer.writerow([result.iri, parent])
 
 
 def get_parents(term_content):
@@ -68,7 +78,7 @@ def main(argv):
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--ontology", "-o", type=str, default="efo")
 	parser.add_argument("--page", "-p", type=int, default=0)
-	parser.add_argument("--size", "-s", type=int, default=100)
+	parser.add_argument("--size", "-s", type=int, default=1000)
 	parser.add_argument("--blocksize", "-b", type=int, default=10000)
 	parser.add_argument("--hostname", default="www.ebi.ac.uk/ols")
 	args = parser.parse_args()
