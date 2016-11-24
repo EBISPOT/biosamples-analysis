@@ -215,23 +215,27 @@ def number_of_values_per_type(db_driver):
 
 def main_func(db_driver):
 
+    print "Generation of reports started"
     # spreadsheet of most common attribute types and values
-    #generate_spreadsheet(driver)
+    generate_spreadsheet(driver)
 
     # Number of attributes per sample
     number_of_attributes_distribution(driver)
 
     # wordcloud of most common attribute types and values
-    #generate_wordcloud(driver)
+    generate_wordcloud(driver)
 
     # Percentage of attribute values mapped to ontology for each attribute type
-    #attribute_values_mapped(driver)
+    attribute_values_mapped(driver)
 
     # top N values to cover P proportion of samples
-    #attribute_value_coverage(driver)
+    attribute_value_coverage(driver)
 
 
 if __name__ == "__main__":
 
-    driver = GraphDatabase.driver("bolt://neo4j-server-local", auth=basic_auth("neo4j", "password"))
+    print "Welcome to the BioSamples analysis"
+
+    # driver = GraphDatabase.driver("bolt://localhost")
+    driver = GraphDatabase.driver("bolt://neo4j-server-local")
     main_func(driver)
