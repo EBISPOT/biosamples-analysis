@@ -39,6 +39,8 @@ services:
         - "7687:7687"
 #    command: dump-config
 
+  #to run this container use a command like:
+  #docker-compose run --service-ports neo4j-analysis [ARGS]
   neo4j-analysis:
     build: 
       context: ./neo4j-analysis
@@ -50,7 +52,8 @@ services:
       - ./wait-for-it.sh
       - neo4j-server-local:7474
       - --
-      - python -u
+      - python
+      - -u
       - neo4j-analysis/neo4j-analysis.py
     
     
