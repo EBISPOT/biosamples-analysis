@@ -5,4 +5,4 @@ RUN ["pip", "install", "neo4j-driver", "wordcloud", "matplotlib", "pillow", "ima
 ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /
 RUN chmod +x /wait-for-it.sh
 
-# load the pythong script via a volume so that its easier to edit
+# load the python script via a volume so that its easier to edit

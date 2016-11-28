@@ -25,7 +25,7 @@ def get_most_common_attributes(db_driver, n_attributes):
                               "WITH t, COUNT(u) AS usage_count "
                               "RETURN t.name AS type, usage_count "
                               "ORDER BY usage_count DESC "
-                              "LIMIT %d" % n_attributes)
+                              "LIMIT {n_attributes}", {"n_attributes":n_attributes})
         for result in results:
             attr_types.append((result["type"], result["usage_count"]))
     return attr_types
@@ -58,10 +58,10 @@ def generate_summary_spreadsheet(args, db_driver):
             row = ["{} ({})".format(attr[0], attr[1])]
 
             with db_driver.session() as session2:
-                cypher = "MATCH (s:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), \
+                cypher = "MATCH (s:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name: {attr_type}}), \
                             (a:Attribute)-->(v:AttributeValue) \
                             RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 10"
-                results2 = session2.run(cypher)
+                results2 = session2.run(cypher, {"attr_type":attr[0]})
                 for result2 in results2:
                     row.append("{} ({})".format(result2["value"], result2["usage_count"]))
 
@@ -85,7 +85,7 @@ def generate_summary_plots(args, db_driver):
             n_attr.append(record["attr_count"])
             n_samples.append(record["samples_count"])
             
-    fig = matplotlib.pyplot.figure(figsize=(24,18))
+    fig = matplotlib.pyplot.figure(figsize=(12,6))
     axis = fig.add_axes((0.0,0.0,1.0,1.0), title="Frequency distribution of number of attributes on each sample")
     axis.bar(n_attr, n_samples)
     axis.set_yscale("log")
@@ -104,7 +104,7 @@ def generate_summary_plots(args, db_driver):
     """
     print "generated summary plots of most common attribute types and values"
 
-def generate_summary_wordcloud(args, db_driver, output_filename):
+def generate_summary_wordcloud(args, db_driver):
     print "generating wordcloud of most common attribute types and values"
     max_words = 1000
     freq = []
@@ -127,9 +127,9 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
     max_words = 1000
     freq2 = []
     with db_driver.session() as session2:
-        cypher = \
-            "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{name:'"+attr_type+"'}), (a:Attribute)-->(v:AttributeValue) RETURN v.name AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT "+str(max_words)
-        results2 = session2.run(cypher)
+        cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:{attr_type}}), (a:Attribute)-->(v:AttributeValue) " \
+            "RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT {max_words}"
+        results2 = session2.run(cypher, {"attr_type":attr_type, "max_words":max_words})
         for result2 in results2:
             freq2.append((result2["value"], result2["usage_count"]))
     wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq2)
@@ -142,53 +142,41 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
     print "generated wordcloud of values of", attr_type
 
 
-def attribute_values_mapped(args, db_driver):
-    print "generating the list with the percentage of attributes values mapped to ontology term"
-    try:
-        os.makedirs("neo4j-analysis/csv")
-    except OSError:
-        pass
-    with open("neo4j-analysis/csv/perc_attr_mapped.csv", "w") as outfile:
-        csvout = csv.writer(outfile)
+def attribute_value_mapped(args, db_driver, attr_type):
+    print "generating the percentage of attributes values mapped to ontology term"
 
-        common_attrs = get_most_common_attributes(db_driver, 100)
-        for attr in common_attrs:
-            cypher = "MATCH (s:Sample)-->(a:Attribute{type:'" + attr[0] + "'}) " \
-                                                                          "RETURN COUNT(s) AS samples, " \
-                                                                          "COUNT(a.iri) AS mapped "
-            with db_driver.session() as session:
-                result = session.run(cypher)
-                for record in result:
-                    print attr, record["samples"], record["mapped"]
-                    row = [str(attr[0]), attr[1], round(float(record["mapped"]) * 100 / record["samples"], 2)]
-                    print row
-                    csvout.writerow(row)
+	#TODO check this does what we expect it to do!
+    cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
+        "RETURN COUNT(u) AS usage_count, COUNT(a.iri) AS mapped "
+    with db_driver.session() as session:
+        result = session.run(cypher, {"attr_type":attr_type})
+        for record in result:
+            prop = round(float(record["mapped"]) * 100 / record["usage_count"])
+            print attr_type, record["usage_count"], record["mapped"], prop
+            break
+    return prop
 
 
-def attribute_value_coverage(args, db_driver):
-    
-    print "generating coverage stats"
+def attribute_value_coverage(args, db_driver, attr_type, usage_count):
     prop = 0.75
     maxcount = 100
     
-    common_attrs = get_most_common_attributes(db_driver, 100)
-    for attr in common_attrs:
-        cypher = "MATCH (s:Sample)--(a:Attribute)--(t:AttributeType{name:'"+attr[0]+"'}), (a)--(v:AttributeValue) RETURN v.name, count(s) AS count_s ORDER BY count(s) DESC"
-        #print cypher
-        with db_driver.session() as session:
-            result = session.run(cypher)
-            running_total = 0
-            i = 0
-            for record in result:
-                i += 1
-                running_total += record["count_s"]
-                #print attr[1], float(attr[1])*prop, running_total, record["count_s"]
-                if running_total > float(attr[1])*prop:
-                    print "for type",attr[0],"the top",i,"values cover",int(prop*100.0),"% of samples"
-                    break
-                if i >= maxcount:
-                    print "for type",attr[0],"the top",maxcount,"values do not cover",int(prop*100.0),"% of samples"
-                    break
+    with db_driver.session() as session:
+        cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)--(t:AttributeType{name:{attr_type}}), (a)--(v:AttributeValue) " \
+            "RETURN v.name, count(u) AS count_s ORDER BY count(u) DESC"
+        result = session.run(cypher, {"attr_type":attr_type})
+        running_total = 0
+        i = 0
+        for record in result:
+            i += 1
+            running_total += record["count_s"]
+            #print attr[1], float(attr[1])*prop, running_total, record["count_s"]
+            if running_total > float(attr[1])*prop:
+                print "for type",attr_type,"the top",i,"values cover",int(prop*100.0),"% of samples"
+                break
+            if i >= maxcount:
+                print "for type",attr_type,"the top",maxcount,"values do not cover",int(prop*100.0),"% of samples"
+                break
 
    
 
@@ -273,9 +261,6 @@ if __name__ == "__main__":
     for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
         #wordcloud of this attribute
         generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
-
-    # Percentage of attribute values mapped to ontology for each attribute type
-    #attribute_values_mapped(args, driver)
-
-    # top N values to cover P proportion of samples
-    #attribute_value_coverage(args, driver)
+        attribute_value_mapped(args, driver, attr_type)
+        attribute_value_coverage(args, driver, attr_type,usage_count)
+        
