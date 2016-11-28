@@ -145,7 +145,7 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
 def attribute_value_mapped(args, db_driver, attr_type):
     print "generating the percentage of attributes values mapped to ontology term"
 
-	#TODO check this does what we expect it to do!
+    #TODO check this does what we expect it to do!
     cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
         "RETURN COUNT(u) AS usage_count, COUNT(a.iri) AS mapped "
     with db_driver.session() as session:
@@ -170,12 +170,12 @@ def attribute_value_coverage(args, db_driver, attr_type, usage_count):
         for record in result:
             i += 1
             running_total += record["count_s"]
-            #print attr[1], float(attr[1])*prop, running_total, record["count_s"]
-            if running_total > float(attr[1])*prop:
-                print "for type",attr_type,"the top",i,"values cover",int(prop*100.0),"% of samples"
+            if running_total > float(usage_count)*prop:
+                print "for type {:s} the top {:d} values cover {:02f}% of samples".format(attr_type,i,prop*100.0)
+                return i
                 break
             if i >= maxcount:
-                print "for type",attr_type,"the top",maxcount,"values do not cover",int(prop*100.0),"% of samples"
+                print "for type {:s} the top {:d} values do not cover {:02f}% of samples".format(attr_type,maxcount,prop*100.0)
                 break
 
    
@@ -262,5 +262,5 @@ if __name__ == "__main__":
         #wordcloud of this attribute
         generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
         attribute_value_mapped(args, driver, attr_type)
-        attribute_value_coverage(args, driver, attr_type,usage_count)
+        attribute_value_coverage(args, driver, attr_type, usage_count)
         
