@@ -5,6 +5,7 @@ import argparse
 import csv
 import wordcloud
 import random
+import os
 import numpy as np
 
 import matplotlib
@@ -17,11 +18,11 @@ def grey_color_func(word, font_size, position, orientation, random_state=None, *
 
 
 def get_most_common_attributes(db_driver, n_attributes):
-    print 'Querying database for the %d most common attributes' % n_attributes
+    print 'Querying database for the %d most common attribute types' % n_attributes
     attr_types = []
     with db_driver.session() as session:
-        results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-->(t:AttributeType) "
-                              "WITH t, COUNT(s) AS usage_count "
+        results = session.run("MATCH (s:Sample)-[u:hasAttribute]->(:Attribute)-->(t:AttributeType) "
+                              "WITH t, COUNT(u) AS usage_count "
                               "RETURN t.name AS type, usage_count "
                               "ORDER BY usage_count DESC "
                               "LIMIT %d" % n_attributes)
@@ -45,22 +46,24 @@ def generate_summary_spreadsheet(args, db_driver):
     print "generating summary spreadsheet of most common attribute types and values"
     common = get_most_common_attributes(db_driver, 100)
         
-    with open("attr_common.csv", "w") as outfile:
+    try:
+        os.makedirs("neo4j-analysis/csv")
+    except OSError:
+        pass
+        
+    with open("neo4j-analysis/csv/attr_common.csv", "w") as outfile:
         csvout = csv.writer(outfile)
 
         for attr in common:
-            #print "{} ({})".format(attr[0], attr[1])
-
             row = ["{} ({})".format(attr[0], attr[1])]
 
             with db_driver.session() as session2:
-                cypher = "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), \
+                cypher = "MATCH (s:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), \
                             (a:Attribute)-->(v:AttributeValue) \
-                            RETURN v.name AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT 10"
+                            RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 10"
                 results2 = session2.run(cypher)
                 for result2 in results2:
                     row.append("{} ({})".format(result2["value"], result2["usage_count"]))
-                    #print "{} ({})".format(result2["value"], result2["usage_count"])
 
             csvout.writerow(row)
             
@@ -70,7 +73,7 @@ def generate_summary_spreadsheet(args, db_driver):
 def generate_summary_plots(args, db_driver):
     print "generating summary plots of most common attribute types and values"
     
-    cypher = "MATCH (s:Sample)-[:hasAttribute]->(a:Attribute) \
+    cypher = "MATCH (s:Sample)-->(a:Attribute) \
                   WITH s, COUNT(DISTINCT a) AS attr_count \
                   RETURN attr_count, COUNT(s) as samples_count \
                   ORDER BY attr_count ASC"
@@ -89,6 +92,10 @@ def generate_summary_plots(args, db_driver):
     axis.set_xlabel("Number of attributes")
     axis.set_ylabel("Frequency")        
     
+    try:
+        os.makedirs("neo4j-analysis/plot")
+    except OSError:
+        pass
     fig.savefig("neo4j-analysis/plot/freq-of-number-attrs.png",bbox_inches='tight')
     
     """
@@ -97,7 +104,7 @@ def generate_summary_plots(args, db_driver):
     """
     print "generated summary plots of most common attribute types and values"
 
-def generate_summary_wordcloud(args, db_driver):
+def generate_summary_wordcloud(args, db_driver, output_filename):
     print "generating wordcloud of most common attribute types and values"
     max_words = 1000
     freq = []
@@ -107,29 +114,41 @@ def generate_summary_wordcloud(args, db_driver):
         
     wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq)
     wc.recolor(color_func=grey_color_func, random_state=3)
+    try:
+        os.makedirs("neo4j-analysis/word_clouds")
+    except OSError:
+        pass
     wc.to_file("neo4j-analysis/word_clouds/cloud-types.png")
     print "generated wordcloud of most common attribute types and values"
     
 
-def generate_wordcloud_of_attribute(args, db_driver, i, attr_type):
-    print i,"generating wordcloud of values of", attr_type
+def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
+    print "generating wordcloud of values of", attr_type
     max_words = 1000
     freq2 = []
     with db_driver.session() as session2:
         cypher = \
-            "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{name:'"+attr_type+"'}), (a:Attribute)-->(v:AttributeValue) RETURN v.name AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT "+max_words
+            "MATCH (s:Sample)-->(a:Attribute)-->(t:AttributeType{name:'"+attr_type+"'}), (a:Attribute)-->(v:AttributeValue) RETURN v.name AS value, COUNT(s) AS usage_count ORDER BY usage_count DESC LIMIT "+str(max_words)
         results2 = session2.run(cypher)
         for result2 in results2:
             freq2.append((result2["value"], result2["usage_count"]))
     wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq2)
     wc.recolor(color_func=grey_color_func, random_state=3)
-    wc.to_file("neo4j-analysis/word_clouds/cloud-values-{:03d}-{}.png".format(i,attr_type))
-    print i,"generated wordcloud of values of", attr_type
+    try:
+        os.makedirs("neo4j-analysis/word_clouds")
+    except OSError:
+        pass
+    wc.to_file("neo4j-analysis/word_clouds/cloud-values-{:07d}-{}.png".format(usage_count,attr_type))
+    print "generated wordcloud of values of", attr_type
 
 
 def attribute_values_mapped(args, db_driver):
     print "generating the list with the percentage of attributes values mapped to ontology term"
-    with open("neo4j-analysis/tables/perc_attr_mapped.csv", "w") as outfile:
+    try:
+        os.makedirs("neo4j-analysis/csv")
+    except OSError:
+        pass
+    with open("neo4j-analysis/csv/perc_attr_mapped.csv", "w") as outfile:
         csvout = csv.writer(outfile)
 
         common_attrs = get_most_common_attributes(db_driver, 100)
@@ -144,7 +163,6 @@ def attribute_values_mapped(args, db_driver):
                     row = [str(attr[0]), attr[1], round(float(record["mapped"]) * 100 / record["samples"], 2)]
                     print row
                     csvout.writerow(row)
-                # print "%s: Ratio=%.2f" % (attr, float(record["mapped"])/record["samples"])
 
 
 def attribute_value_coverage(args, db_driver):
@@ -176,7 +194,11 @@ def attribute_value_coverage(args, db_driver):
 
 def number_of_values_per_type(args, db_driver):
     print "generating spreadsheet with number of values for each attribute type"
-    with open("neo4j-analysis/tables/num_values_distribution.csv", "w") as fileout:
+    try:
+        os.makedirs("neo4j-analysis/csv")
+    except OSError:
+        pass
+    with open("neo4j-analysis/csv/num_values_distribution.csv", "w") as fileout:
         csvout = csv.writer(fileout)
 
         cypher = "MATCH (s:Sample)-->(a:Attribute)-->(at:AttributeType) \
@@ -220,6 +242,10 @@ def number_of_values_per_type(args, db_driver):
         ax2.set_xlabel("Attribute types")
         ax2.set_ylabel("Diversity of values")
         
+        try:
+            os.makedirs("neo4j-analysis/plot")
+        except OSError:
+            pass
         fig.savefig("neo4j-analysis/plot/value-diversity.png",bbox_inches='tight')
 
 
@@ -230,6 +256,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--hostname', default="neo4j-server-local")
     parser.add_argument('--summary', action='store_true')
+    parser.add_argument('--top-attr',  type=int, default=0)
     
     args = parser.parse_args()
     
@@ -243,8 +270,9 @@ if __name__ == "__main__":
     if args.summary:
         generate_summary(args, driver)
 
-    # wordcloud of most common attribute types and values
-    #generate_wordcloud(args, driver)
+    for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
+        #wordcloud of this attribute
+        generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
 
     # Percentage of attribute values mapped to ontology for each attribute type
     #attribute_values_mapped(args, driver)
