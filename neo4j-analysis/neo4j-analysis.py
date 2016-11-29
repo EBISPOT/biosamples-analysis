@@ -304,25 +304,10 @@ if __name__ == "__main__":
     if args.summary:
         generate_summary(args, driver)
 
-<<<<<<< HEAD
     for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
-=======
-        # for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
-        #wordcloud of this attribute
-<<<<<<< 2456a4fce3c6c9da6d7396ac216345dcfff104dd
->>>>>>> 2f5489aa64f6fa426f6ed1e434922d27d1fc1fe2
         generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
         attribute_value_mapped(args, driver, attr_type)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
         
-=======
-        # generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
-
-        # Percentage of attribute values mapped to ontology for each attribute type
-        #attribute_values_mapped(args, driver)
-
-        # top N values to cover P proportion of samples
-        #attribute_value_coverage(args, driver)
->>>>>>> Update the populate-neo4j script
