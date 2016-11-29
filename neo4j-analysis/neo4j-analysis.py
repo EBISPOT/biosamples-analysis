@@ -108,7 +108,7 @@ def generate_summary_wordcloud(args, db_driver):
     max_words = args.wordcloud_entries
     if max_words < 1: 
         return
-        
+
     freq = []
     
     print "generating wordcloud of most common attribute types and values"
@@ -242,6 +242,28 @@ def number_of_values_per_type(args, db_driver):
         fig.savefig("neo4j-analysis/plot/value-diversity.png",bbox_inches='tight')
 
 
+def new_test_function(args, db_driver, attr_type, usage_count):
+    """
+    Find the % of values for which the attribute type is actually a parent ontology term
+    :param args:
+    :param db_driver:
+    :param attr_type:
+    :param usage_count:
+    :return:
+    """
+
+    print "getting percentage"
+    max_words = 1000
+    with db_driver.session() as session:
+        cypher = \
+            "MATCH (s:Sample)-->(a:Attribute{type:'{}')-[:hasIri]->(o:OntologyTerm)-[:inEfo]->(feo:EfoOntologyTerm)-[*]->(eo:EfoOntologyTerm) " \
+            "WHERE LOWER(a.type) = LOWER(eo.label) " \
+            "RETURN COUNT(s)" \
+            "LIMIT {:d}".format(attr_type, max_words)
+
+        results = session.run(cypher)
+
+
 # def attribute_values_matching_efo_label(args, db_driver, attr_type, usage_count ):
 #     print "generating value matching to efo label spreadsheet"
 #     max_words = 1000
@@ -276,10 +298,10 @@ def number_of_values_per_type(args, db_driver):
 #                 csvout.writerow(row)
 
 
-def perc_sample_mapped_to_efo(args, db_driver, attr_type, usage_count):
-    print 'Generating csv file with percentage of attributes values mapped to EFO'
-    with db_driver.session() as session2:
-        cypher = 'MATCH (s:Sample'
+# def perc_sample_mapped_to_efo(args, db_driver, attr_type, usage_count):
+#     print 'Generating csv file with percentage of attributes values mapped to EFO'
+#     with db_driver.session() as session2:
+#         cypher = 'MATCH (s:Sample'
 
 
 if __name__ == "__main__":
@@ -297,8 +319,6 @@ if __name__ == "__main__":
     driver = GraphDatabase.driver("bolt://"+args.hostname)
 
     print "Generation of reports started"
-
-
 
     # spreadsheet of most common attribute types and values
     if args.summary:
