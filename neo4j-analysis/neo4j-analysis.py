@@ -105,9 +105,13 @@ def generate_summary_plots(args, db_driver):
     print "generated summary plots of most common attribute types and values"
 
 def generate_summary_wordcloud(args, db_driver):
-    print "generating wordcloud of most common attribute types and values"
-    max_words = 1000
+    max_words = args.wordcloud_entries
+    if max_words < 1: 
+        return
+        
     freq = []
+    
+    print "generating wordcloud of most common attribute types and values"
     common = get_most_common_attributes(db_driver, max_words)
     for attr in common:
         freq.append((attr[0], attr[1]))
@@ -123,9 +127,14 @@ def generate_summary_wordcloud(args, db_driver):
     
 
 def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
-    print "generating wordcloud of values of", attr_type
-    max_words = 1000
+    
+    max_words = args.wordcloud_entries
+    if max_words < 1: 
+        return
+        
     freq2 = []
+    
+    print "generating wordcloud of values of", attr_type
     with db_driver.session() as session2:
         cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:{attr_type}}), (a:Attribute)-->(v:AttributeValue) " \
             "RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT {max_words}"
@@ -143,7 +152,7 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
 
 
 def attribute_value_mapped(args, db_driver, attr_type):
-    print "generating the percentage of attributes values mapped to ontology term"
+    #print "generating the percentage of attributes values mapped to ontology term"
 
     #TODO check this does what we expect it to do!
     cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
@@ -151,15 +160,12 @@ def attribute_value_mapped(args, db_driver, attr_type):
     with db_driver.session() as session:
         result = session.run(cypher, {"attr_type":attr_type})
         for record in result:
-            prop = round(float(record["mapped"]) * 100 / record["usage_count"])
-            print attr_type, record["usage_count"], record["mapped"], prop
-            break
-    return prop
+            prop = round(float(record["mapped"]) / float(record["usage_count"]))
+            print "for type {:s} ontologies terms are mapped for {:02f}% of uses".format(attr_type,prop*100.0)
+            return prop
 
 
-def attribute_value_coverage(args, db_driver, attr_type, usage_count):
-    prop = 0.75
-    maxcount = 100
+def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxcount):
     
     with db_driver.session() as session:
         cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)--(t:AttributeType{name:{attr_type}}), (a)--(v:AttributeValue) " \
@@ -171,12 +177,11 @@ def attribute_value_coverage(args, db_driver, attr_type, usage_count):
             i += 1
             running_total += record["count_s"]
             if running_total > float(usage_count)*prop:
-                print "for type {:s} the top {:d} values cover {:02f}% of samples".format(attr_type,i,prop*100.0)
+                print "for type {:s} the top {:d} values cover {:02f}% of uses".format(attr_type,i,prop*100.0)
                 return i
-                break
             if i >= maxcount:
-                print "for type {:s} the top {:d} values do not cover {:02f}% of samples".format(attr_type,maxcount,prop*100.0)
-                break
+                print "for type {:s} the top {:d} values do not cover {:02f}% of uses".format(attr_type,maxcount,prop*100.0)
+                return None
 
    
 
@@ -244,6 +249,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--hostname', default="neo4j-server-local")
     parser.add_argument('--summary', action='store_true')
+    parser.add_argument('--wordcloud-entries',  type=int, default=1000)
     parser.add_argument('--top-attr',  type=int, default=0)
     
     args = parser.parse_args()
@@ -259,8 +265,9 @@ if __name__ == "__main__":
         generate_summary(args, driver)
 
     for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
-        #wordcloud of this attribute
         generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
         attribute_value_mapped(args, driver, attr_type)
-        attribute_value_coverage(args, driver, attr_type, usage_count)
+        attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
+        attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
+        attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
         
