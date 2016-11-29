@@ -15,10 +15,12 @@ time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 10000 --into "$NEO4J_DATA"/d
         --nodes:AttributeType "$NEO4J_DATA/types.csv" \
         --nodes:AttributeValue "$NEO4J_DATA/values.csv" \
         --nodes:OntologyTerm "$NEO4J_DATA/ontologies.csv" \
+        --nodes:EfoOntologyTerm "$NEO4J_DATA/efoterms.csv"  \
         --relationships:hasAttribute "$NEO4J_DATA/has_attribute.csv" \
         --relationships:hasValue "$NEO4J_DATA/has_value.csv" \
         --relationships:hasType "$NEO4J_DATA/has_type.csv" \
-        --relationships:hasIri "$NEO4J_DATA/has_iri.csv"
+        --relationships:hasIri "$NEO4J_DATA/has_iri.csv" \
+        --relationships:hasParent "$NEO4J_DATA/has_parent.csv"
 
 # Create indexes
 echo "Creating indexes..."

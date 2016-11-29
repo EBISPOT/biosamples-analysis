@@ -34,3 +34,4 @@ MATCH (at:AttributeType {name: "Disease State"})<-[:hasType]-(a:Attribute)-[:has
 ~~~~
 MATCH (av:AttributeValue)<-[:hasValue]-(:Attribute)-[:hasType]->(at:AttributeType) WITH av, COUNT(at) AS num_of_types WHERE num_of_types > 1 MATCH (s:Sample)-[:hasAttribute]->(a:Attribute)-[:hasValue]->(av) WITH av, COUNT(s) AS usage_count RETURN av ORDER BY usage_count DESC LIMIT 10
 ~~~~
+
