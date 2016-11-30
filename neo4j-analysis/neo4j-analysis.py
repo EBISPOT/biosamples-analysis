@@ -350,10 +350,10 @@ if __name__ == "__main__":
 			attrs.append((attr, usage_count))
 
     for attr_type, usage_count in attrs:
-        #generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
-        attribute_value_mapped(args, driver, attr_type,usage_count)
-        attribute_value_mapped_label_match(args, driver, attr_type,usage_count)
-        #attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
-        #attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
-        #attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
+        generate_wordcloud_of_attribute(args, driver, attr_type, usage_count)
+        attribute_value_mapped(args, driver, attr_type, usage_count)
+        attribute_value_mapped_label_match(args, driver, attr_type, usage_count)
+        attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
+        attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
+        attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
         
