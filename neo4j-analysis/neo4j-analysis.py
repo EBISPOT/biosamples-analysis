@@ -18,19 +18,27 @@ def grey_color_func(word, font_size, position, orientation, random_state=None, *
 
 
 def get_most_common_attributes(db_driver, n_attributes):
-    print 'Querying database for the %d most common attribute types' % n_attributes
     attr_types = []
+    if n_attributes == 0:
+        return attr_types
+        
+    print 'Querying database for the %d most common attribute types' % n_attributes
     with db_driver.session() as session:
-        results = session.run("MATCH (s:Sample)-[u:hasAttribute]->(:Attribute)-->(t:AttributeType) "
-                              "WITH t, COUNT(u) AS usage_count "
-                              "RETURN t.name AS type, usage_count "
+        results = session.run("MATCH (:Sample)-[u:hasAttribute]->(a:Attribute) "
+                              "RETURN a.type AS type, COUNT(u) AS usage_count "
                               "ORDER BY usage_count DESC "
                               "LIMIT {n_attributes}", {"n_attributes":n_attributes})
         for result in results:
             attr_types.append((result["type"], result["usage_count"]))
     return attr_types
-
-
+    
+def get_usage_count(db_driver, attr_type):
+    with db_driver.session() as session:
+        results = session.run("MATCH (s:Sample)-[u:hasAttribute]->(:Attribute{type:{attr_type}}) "
+                              "RETURN COUNT(u) AS usage_count", {"attr_type":attr_type})
+        for result in results:
+            return result["usage_count"]
+            
 def generate_summary(args, db_driver):
     print "generating summary of most common attribute types and values"
 
@@ -323,6 +331,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary', action='store_true')
     parser.add_argument('--wordcloud-entries',  type=int, default=1000)
     parser.add_argument('--top-attr',  type=int, default=0)
+    parser.add_argument('--attr', action='append')
 
     args = parser.parse_args()
 
@@ -334,7 +343,13 @@ if __name__ == "__main__":
     if args.summary:
         generate_summary(args, driver)
 
-    for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
+    attrs = get_most_common_attributes(driver, args.top_attr)
+    if args.attr != None:
+		for attr in args.attr:
+			usage_count = get_usage_count(driver, attr)
+			attrs.append((attr, usage_count))
+
+    for attr_type, usage_count in attrs:
         #generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
         attribute_value_mapped(args, driver, attr_type,usage_count)
         attribute_value_mapped_label_match(args, driver, attr_type,usage_count)
