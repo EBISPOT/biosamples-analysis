@@ -187,10 +187,10 @@ def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxc
             i += 1
             running_total += record["count_s"]
             if running_total > float(usage_count)*prop:
-                print "for type {:s} the top {:d} values cover {:02f}% of uses".format(attr_type,i,prop*100.0)
+                print "for type '{:s}' the top {:d} values cover {:.0%} of uses".format(attr_type,i,prop)
                 return i
             if i >= maxcount:
-                print "for type {:s} the top {:d} values do not cover {:02f}% of uses".format(attr_type,maxcount,prop*100.0)
+                print "for type '{:s}' the top {:d} values do not cover {:.0%} of uses".format(attr_type,maxcount,prop)
                 return None
 
 
