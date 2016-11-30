@@ -164,8 +164,8 @@ def attribute_value_mapped(args, db_driver, attr_type, usage_count):
 
 def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
     cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(eo:EfoOntologyTerm) \
-		WHERE eo.label = a.value \
-		RETURN COUNT(u) AS label_match_count'
+        WHERE eo.label = a.value OR a.value IN eo.`synonyms[]`\
+        RETURN COUNT(u) AS label_match_count'
     with db_driver.session() as session:
         result = session.run(cypher, {"attr_type":attr_type})
         for record in result:
@@ -299,8 +299,8 @@ def new_test_function(args, db_driver, attr_type, usage_count):
 #
 #                 with db_driver.session() as session2:
 #                     cypher = "MATCH (s:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), \
-# 								(a:Attribute)-->(v:AttributeValue) \
-# 								RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 10"
+#                               (a:Attribute)-->(v:AttributeValue) \
+#                               RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 10"
 #                     results2 = session2.run(cypher)
 #                     for result2 in results2:
 #                         row.append("{} ({})".format(result2["value"], result2["usage_count"]))
