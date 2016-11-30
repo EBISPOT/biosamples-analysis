@@ -345,9 +345,9 @@ if __name__ == "__main__":
 
     attrs = get_most_common_attributes(driver, args.top_attr)
     if args.attr != None:
-		for attr in args.attr:
-			usage_count = get_usage_count(driver, attr)
-			attrs.append((attr, usage_count))
+        for attr in args.attr:
+            usage_count = get_usage_count(driver, attr)
+            attrs.append((attr, usage_count))
 
     for attr_type, usage_count in attrs:
         generate_wordcloud_of_attribute(args, driver, attr_type, usage_count)
