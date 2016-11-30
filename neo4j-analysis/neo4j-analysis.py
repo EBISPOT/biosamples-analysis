@@ -151,18 +151,28 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
     print "generated wordcloud of values of", attr_type
 
 
-def attribute_value_mapped(args, db_driver, attr_type):
-    #print "generating the percentage of attributes values mapped to ontology term"
-
-    #TODO check this does what we expect it to do!
+def attribute_value_mapped(args, db_driver, attr_type, usage_count):
     cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
         "RETURN COUNT(u) AS usage_count, COUNT(a.iri) AS mapped "
     with db_driver.session() as session:
         result = session.run(cypher, {"attr_type":attr_type})
         for record in result:
-            prop = round(float(record["mapped"]) / float(record["usage_count"]))
-            print "for type {:s} ontologies terms are mapped for {:02f}% of uses".format(attr_type,prop*100.0)
+            prop = float(record["mapped"]) / float(usage_count)
+            print "for type '{:s}' ontologies terms are mapped for {:.0%} of uses".format(attr_type,prop)
             return prop
+
+
+def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
+    cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(eo:EfoOntologyTerm) \
+		WHERE eo.label = a.value \
+		RETURN COUNT(u) AS label_match_count'
+    with db_driver.session() as session:
+        result = session.run(cypher, {"attr_type":attr_type})
+        for record in result:
+            prop = float(record["label_match_count"]) / float(usage_count)
+            print "for type '{:s}' ontologies terms have the same value for {:.0%} of uses".format(attr_type,prop)
+            return prop
+
 
 
 def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxcount):
@@ -325,9 +335,10 @@ if __name__ == "__main__":
         generate_summary(args, driver)
 
     for attr_type, usage_count in get_most_common_attributes(driver, args.top_attr):
-        generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
-        attribute_value_mapped(args, driver, attr_type)
-        attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
-        attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
-        attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
+        #generate_wordcloud_of_attribute(args, driver, attr_type,usage_count)
+        attribute_value_mapped(args, driver, attr_type,usage_count)
+        attribute_value_mapped_label_match(args, driver, attr_type,usage_count)
+        #attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
+        #attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
+        #attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
         
