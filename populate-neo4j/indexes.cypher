@@ -10,3 +10,5 @@ CREATE INDEX on :Attribute(value);
 CREATE INDEX on :Attribute(iri);
 CREATE INDEX on :EfoOntologyTerm(label);
 CREATE INDEX on :EfoOntologyTerm(obselete);
+
+MATCH (o:OntologyTerm),(e:EfoOntologyTerm) WHERE o.iri = e.iri CREATE (o)-[r:inEfo]->(e);
