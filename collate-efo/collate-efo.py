@@ -16,9 +16,9 @@ class OntologyTerm:
         self.parents = parents
 
 
-def write_results(results, block, ontology):
-    term_file = "data/{}-terms-{:03d}.csv".format(ontology, block)
-    parent_file = "data/{}-parents-{:03d}.csv".format(ontology, block)
+def write_results(results, ontology):
+    term_file = "data/tmp_{}_terms.csv".format(ontology)
+    parent_file = "data/tmp_{}_parents.csv".format(ontology)
 
     term_file = os.path.abspath(term_file)
     parent_file = os.path.abspath(parent_file)
@@ -78,7 +78,6 @@ def main(argv):
     parser.add_argument("--ontology", "-o", type=str, default="efo")
     parser.add_argument("--page", "-p", type=int, default=0)
     parser.add_argument("--size", "-s", type=int, default=1000)
-    parser.add_argument("--blocksize", "-b", type=int, default=10000)
     parser.add_argument("--hostname", default="www.ebi.ac.uk/ols")
     args = parser.parse_args()
 
@@ -100,7 +99,6 @@ def main(argv):
             content = json.loads(res.content)
             if res.status_code == 200:
 
-                block = (n_element / args.blocksize) + 1
                 terms = content["_embedded"]["terms"]
                 results = []
                 for term in terms:
@@ -123,7 +121,7 @@ def main(argv):
                                                                           n_element,
                                                                           total_elements)
 
-                write_results(results, block, nav_options["ontology"])
+                write_results(results, nav_options["ontology"])
             nav_options["page"] += 1
         print "Page {:d}/{:d} - Element {:d}/{:d}".format(nav_options["page"],
                                                           total_pages,
