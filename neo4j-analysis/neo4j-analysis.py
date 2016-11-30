@@ -146,6 +146,10 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
     with db_driver.session() as session2:
         cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:{attr_type}}), (a:Attribute)-->(v:AttributeValue) " \
             "RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT {max_words}"
+        cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) \
+            RETURN a.value AS value, count(u) AS usage_count \
+            ORDER BY count(u) DESC \
+            LIMIT {max_words}"
         results2 = session2.run(cypher, {"attr_type":attr_type, "max_words":max_words})
         for result2 in results2:
             freq2.append((result2["value"], result2["usage_count"]))
@@ -186,9 +190,11 @@ def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
 def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxcount):
     
     with db_driver.session() as session:
-        cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)--(t:AttributeType{name:{attr_type}}), (a)--(v:AttributeValue) " \
-            "RETURN v.name, count(u) AS count_s ORDER BY count(u) DESC"
-        result = session.run(cypher, {"attr_type":attr_type})
+        cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) \
+            RETURN a.value, count(u) AS count_s \
+            ORDER BY count(u) DESC \
+            LIMIT {maxcount}"
+        result = session.run(cypher, {"attr_type":attr_type, "maxcount":maxcount})
         running_total = 0
         i = 0
         for record in result:
