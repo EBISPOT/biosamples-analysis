@@ -8,3 +8,5 @@ CREATE CONSTRAINT ON (eot:EfoOntologyTerm) ASSERT eot.iri IS UNIQUE;
 CREATE INDEX on :Attribute(type);
 CREATE INDEX on :Attribute(value);
 CREATE INDEX on :Attribute(iri);
+CREATE INDEX on :EfoOntologyTerm(label);
+CREATE INDEX on :EfoOntologyTerm(obselete);
