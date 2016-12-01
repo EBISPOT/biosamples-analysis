@@ -55,5 +55,21 @@ services:
       - python
       - -u
       - neo4j-analysis/neo4j-analysis.py
+
+  neo4j-correct:
+    build:
+      context: ./neo4j-correct
+    volumes:
+      - ./neo4j-analysis:/neo4j-analysis
+      - ./neo4j-correct:/neo4j-correct
+    depends_on:
+      - neo4j-server-local
+    entrypoint:
+      - ./wait-for-it.sh
+      - neo4j-server-local:7474
+      - --
+      - python
+      - -u
+      - neo4j-correct/neo4j-correct.py
     
     
