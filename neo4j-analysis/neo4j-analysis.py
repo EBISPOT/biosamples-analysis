@@ -176,6 +176,7 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
 	wc.to_file("neo4j-analysis/word_clouds/cloud-values-{:07d}-{}.png".format(usage_count,attr_type))
 	print "generated wordcloud of values of", attr_type
 
+
 def attribute_value_mapped(args, db_driver, attr_type, usage_count):
 	cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
 	         "RETURN COUNT(u) AS usage_count, COUNT(a.iri) AS mapped "
@@ -310,7 +311,7 @@ def attribute_values_mapped_to_obsolete_terms(args, db_driver, attr_type, usage_
 
 		percentage = 100 * (float(total) / usage_count)
 		print "for type {:s} ontologies terms are mapped to an obsolete ontology term " \
-		      "are {:02f}% of uses".format(attr_type, percentage)
+		      "are {:02.2f}% of uses".format(attr_type, percentage)
 
 # def attribute_values_matching_efo_label(args, db_driver, attr_type, usage_count ):
 #     print "generating value matching to efo label spreadsheet"
