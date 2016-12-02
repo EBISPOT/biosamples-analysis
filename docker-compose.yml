@@ -7,9 +7,9 @@ services:
     volumes:
       - ./data:/data
 
-  collate-efo:
+  collate-ontologies:
     build:
-      context: ./collate-efo
+      context: ./collate-ontologies
     volumes:
       - ./data:/data
 
