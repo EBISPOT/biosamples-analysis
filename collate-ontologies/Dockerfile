@@ -1,6 +1,6 @@
 FROM python:2.7-alpine
 
-COPY collate-efo.py /
+COPY collate-ontologies.py /
 RUN ["pip", "install", "requests", "unicodecsv"]
 
 COPY entrypoint.sh /

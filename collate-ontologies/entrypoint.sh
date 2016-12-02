@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-python -u collate-efo.py
+python -u collate-ontologies.py -o ncbitaxon -s 10000
 
 
 cat /data/tmp_efo_terms.csv | head -n 1 > /data/efo_terms.csv
