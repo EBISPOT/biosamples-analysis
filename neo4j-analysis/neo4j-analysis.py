@@ -294,23 +294,23 @@ def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
                 values["not_missing"] = record["count"]
 
     count = values["not_missing"] if "not_missing" in values else 0
-    percentage = 100 * (float(count) / usage_count)
-    print "for type {:s} ontologies terms are mapped to a child term are {:02f}% of uses".format(attr_type, percentage)
+    prop = float(count) / float(usage_count)
+    print "for type '{:s}' ontologies terms are a child term for {:.0%} of uses".format(attr_type, prop)
 
 
 def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
+    total = 0
     with db_driver.session() as session:
         cypher = \
             "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})" \
             "-->(o:OntologyTerm)-[inefo:inEfo]->(efo:EfoOntologyTerm{obsolete:'True'}) " \
             "RETURN DISTINCT a.value AS value, COUNT(u) AS count, o.iri AS iri"
         results = session.run(cypher, {"attr_type": attr_type})
-        total = 0
         for record in results:
             total += record["count"]
 
-        percentage = 100 * (float(total) / usage_count)
-        print "for type {:s} ontologies terms are mapped to an obsolete ontology term are {:02.2f}% of uses".format(attr_type, percentage)
+    prop = float(total) / float(usage_count)
+    print "for type '{:s}' ontologies terms are obsolete for {:.0%} of uses".format(attr_type, prop)
 
 # def attribute_values_matching_efo_label(args, db_driver, attr_type, usage_count ):
 #     print "generating value matching to efo label spreadsheet"
