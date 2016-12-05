@@ -80,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("--page", "-p", type=int, default=0)
     parser.add_argument("--size", "-s", type=int, default=1000)
     parser.add_argument("--hostname", default="www.ebi.ac.uk/ols")
+    parser.add_argument("--threads", type=int,default=4)
     args = parser.parse_args()
 
     nav_options = vars(args)
@@ -116,7 +117,7 @@ if __name__ == "__main__":
                 parent_writer_csv.writerow([':START_ID(EfoOntologyTerm)', ':END_ID(EfoOntologyTerm)'])
             
                 #prepare for asynchronisity
-                with concurrent.futures.ProcessPoolExecutor() as executor:
+                with concurrent.futures.ProcessPoolExecutor(max_workers = args.threads) as executor:
                     futures = []
                 
                     #now get each page and parse it
