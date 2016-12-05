@@ -2,8 +2,8 @@
 set -e
 
 
-python -u collate-ontologies.py -o ncbitaxon -s 10000 &
-python -u collate-ontologies.py -o efo &
+time python -u collateontologies.py -o ncbitaxon -s 10000 &
+tinme python -u collateontologies.py -o efo &
 wait
 
 cat /data/tmp_ncbitaxon_terms.csv | head -n 1 > /data/ncbitaxon_terms.csv

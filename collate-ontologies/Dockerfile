@@ -1,8 +1,8 @@
-FROM python:2.7-alpine
+FROM python:3.5
 
-RUN ["pip", "install", "requests", "unicodecsv", "futures", "requests-futures"]
+RUN ["pip", "install", "requests", "unicodecsv", "futures"]
 
-COPY collate-ontologies.py /
+COPY collateontologies.py /
 COPY entrypoint.sh /
 
 ENTRYPOINT ["sh", "entrypoint.sh"]
