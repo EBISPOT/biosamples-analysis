@@ -111,10 +111,10 @@ if __name__ == "__main__":
         #open the writers
         with open(term_file, 'wb') as term_writer:
             term_writer_csv = unicodecsv.writer(term_writer, delimiter=",")
-            term_writer_csv.writerow(['iri:ID(EfoOntologyTerm)', 'label', 'synonyms[]', 'parents[]', 'obsolete'])
+            term_writer_csv.writerow(['iri:ID({}OntologyTerm)'.format(args.ontology), 'label', 'synonyms[]', 'parents[]', 'obsolete'])
             with open(parent_file, 'wb') as parent_writer:
                 parent_writer_csv = unicodecsv.writer(parent_writer, delimiter=",")
-                parent_writer_csv.writerow([':START_ID(EfoOntologyTerm)', ':END_ID(EfoOntologyTerm)'])
+                parent_writer_csv.writerow([':START_ID({}OntologyTerm)'.format(args.ontology), ':END_ID({}OntologyTerm)'.format(args.ontology)])
             
                 #prepare for asynchronisity
                 with concurrent.futures.ProcessPoolExecutor(max_workers = args.threads) as executor:

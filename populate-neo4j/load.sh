@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 NEO4J_BIN=/var/lib/neo4j/bin
 NEO4J_DATA=/data
@@ -9,18 +10,20 @@ rm -rf "$NEO4J_DATA"/databases/graph.db.tmp
 
 # Create the new content
 echo "Creating new database..."
-time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 10000 --into "$NEO4J_DATA"/databases/graph.db.tmp --i-type string \
+time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 1000 --into "$NEO4J_DATA"/databases/graph.db.tmp --i-type string \
         --nodes:Sample "$NEO4J_DATA/samples.csv" \
         --nodes:Attribute "$NEO4J_DATA/attributes.csv" \
         --nodes:AttributeType "$NEO4J_DATA/types.csv" \
         --nodes:AttributeValue "$NEO4J_DATA/values.csv" \
         --nodes:OntologyTerm "$NEO4J_DATA/ontologies.csv" \
-        --nodes:EfoOntologyTerm "$NEO4J_DATA/efo_terms.csv"  \
+        --nodes:efoOntologyTerm "$NEO4J_DATA/efo_terms.csv" \
+        --nodes:ncbitaxonOntologyTerm "$NEO4J_DATA/ncbitaxon_terms.csv" \
         --relationships:hasAttribute "$NEO4J_DATA/has_attribute.csv" \
         --relationships:hasValue "$NEO4J_DATA/has_value.csv" \
         --relationships:hasType "$NEO4J_DATA/has_type.csv" \
         --relationships:hasIri "$NEO4J_DATA/has_iri.csv" \
-        --relationships:hasParent "$NEO4J_DATA/efo_parents.csv"
+        --relationships:hasParent "$NEO4J_DATA/efo_parents.csv" \
+        --relationships:hasParent "$NEO4J_DATA/ncbitaxon_parents.csv"
 
 # Create indexes
 echo "Creating indexes..."
