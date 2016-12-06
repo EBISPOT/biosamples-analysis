@@ -16,8 +16,8 @@ time nice "$NEO4J_BIN"/neo4j-import --bad-tolerance 1000 --into "$NEO4J_DATA"/da
         --nodes:AttributeType "$NEO4J_DATA/types.csv" \
         --nodes:AttributeValue "$NEO4J_DATA/values.csv" \
         --nodes:OntologyTerm "$NEO4J_DATA/ontologies.csv" \
-        --nodes:efoOntologyTerm "$NEO4J_DATA/efo_terms.csv" \
-        --nodes:ncbitaxonOntologyTerm "$NEO4J_DATA/ncbitaxon_terms.csv" \
+        --nodes:efoOntologyTerm:OLS "$NEO4J_DATA/efo_terms.csv" \
+        --nodes:ncbitaxonOntologyTerm:OLS "$NEO4J_DATA/ncbitaxon_terms.csv" \
         --relationships:hasAttribute "$NEO4J_DATA/has_attribute.csv" \
         --relationships:hasValue "$NEO4J_DATA/has_value.csv" \
         --relationships:hasType "$NEO4J_DATA/has_type.csv" \
