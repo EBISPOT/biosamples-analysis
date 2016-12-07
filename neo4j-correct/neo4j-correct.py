@@ -59,10 +59,11 @@ def correct_obsolete_terms(db_driver):
 
 
 def correct_numeric_organism(db_driver):
+	print "Correcting numeric organism to their corresponding ontology term"
 	with db_driver.session() as session:
 		cypher = \
-			"MATCH (a:Attribute{type:'Organism'})-[:hasIri]->(o:OntologyTerm)-[:inEfo]->(efo:EfoOntologyTerm) " \
-			"WITH a, a.value as value, o.iri as iri, '\\b(.+)_' + a.value + '\\b' AS regex, efo "\
+			"MATCH (a:Attribute{type:'Organism'})-[:hasIri]->(o:OntologyTerm)-[:inEfo]->(efo:efoOntologyTerm) " \
+			"WITH a, a.value as value, o.iri as iri, '\\\\b(.+)_' + a.value + '\\\\b' AS regex, efo "\
 			"WHERE value =~ '[0-9]+' AND iri =~ regex " \
 			"SET a.value = efo.label"
 		session.run(cypher)
@@ -80,5 +81,5 @@ driver = GraphDatabase.driver("bolt://" + args.hostname)
 print "Applying database corrections"
 
 correct_obsolete_terms(driver)
-correct_numeric_organism(driver)
+# correct_numeric_organism(driver)
 

@@ -15,6 +15,15 @@ import matplotlib.pyplot
 import re
 
 
+def get_attribute_type_iri(attr_type):
+    mapping = {
+        "Sex": "http://purl.obolibrary.org/obo/PATO_0000047",
+        "Organism part": "http://www.ebi.ac.uk/efo/EFO_0000635",
+        "Organism": "http://purl.obolibrary.org/obo/OBI_0100026"
+    }
+    return mapping[attr_type]
+
+
 def grey_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
     return "hsl(%d, 100%%, 100%%)" % random.randint(120, 160)
 
@@ -191,8 +200,8 @@ def attribute_value_mapped(args, db_driver, attr_type, usage_count):
 
 
 def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
-    cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(eo:OLS) \
-        WHERE eo.label = a.value OR a.value IN eo.`synonyms[]`\
+    cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(ols:OLS) \
+        WHERE ols.label = a.value OR a.value IN ols.`synonyms[]`\
         RETURN COUNT(u) AS label_match_count'
     with db_driver.session() as session:
         result = session.run(cypher, {"attr_type": attr_type})
@@ -314,39 +323,6 @@ def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
     prop = float(total) / float(usage_count)
     print "for type '{:s}' ontologies terms are obsolete for {:.0%} of uses".format(attr_type, prop)
 
-# def attribute_values_matching_efo_label(args, db_driver, attr_type, usage_count ):
-#     print "generating value matching to efo label spreadsheet"
-#     max_words = 1000
-#     with db_driver.session() as session2:
-#         cypher = \
-#             "MATCH (s:Sample)-[:hasAttribute]->(a:Attribute{type: '{}'})-->(o:OntologyTerm) WITH s,a,o \
-#             MATCH (eo:EfoOntologyTerm)<--(o)<--(a)-->(av:AttributeValue) \
-#             WHERE eo.label <> av.name \
-#             RETURN eo.label AS label, av.name AS attr_value, COUNT(s) AS sample_count \
-#             ORDER BY sample_count DESC \
-#             LIMIT {}".format(attr_type,max_words)
-#
-#         try:
-#             os.makedirs("neo4j-analysis/csv")
-#         except OSError:
-#             pass
-#
-#         with open("neo4j-analysis/csv/{}_efo_label_matching.csv".format(attr_type), "w") as outfile:
-#             csvout = unicodecsv.writer(outfile)
-#
-#             for attr in common:
-#                 row = ["{} ({})".format(attr[0], attr[1])]
-#
-#                 with db_driver.session() as session2:
-#                     cypher = "MATCH (s:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:'"+attr[0]+"'}), \
-#                               (a:Attribute)-->(v:AttributeValue) \
-#                               RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 10"
-#                     results2 = session2.run(cypher)
-#                     for result2 in results2:
-#                         row.append("{} ({})".format(result2["value"], result2["usage_count"]))
-#
-#                 csvout.writerow(row)
-
 if __name__ == "__main__":
     print "Welcome to the BioSamples analysis"
 
@@ -382,5 +358,6 @@ if __name__ == "__main__":
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
-        
-        #attribute_value_child_of_type(args, driver, attr_type, usage_count, iri)
+
+        iri = get_attribute_type_iri(attr_type)
+        attribute_value_child(args, driver, attr_type, usage_count, iri)
