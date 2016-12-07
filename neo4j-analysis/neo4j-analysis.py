@@ -189,7 +189,7 @@ def attribute_value_mapped(args, db_driver, attr_type, usage_count):
 
 
 def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
-    cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(eo:EfoOntologyTerm) \
+    cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(eo:OLS) \
         WHERE eo.label = a.value OR a.value IN eo.`synonyms[]`\
         RETURN COUNT(u) AS label_match_count'
     with db_driver.session() as session:
@@ -283,8 +283,8 @@ def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
     with db_driver.session() as session:
         cypher = \
             "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
-            "OPTIONAL MATCH (a)-[:hasIri]->(:OntologyTerm)-[:inEfo]->(:EfoOntologyTerm)" \
-            "-[:hasParent*1..]->(eo:EfoOntologyTerm{iri:{iri}}) " \
+            "OPTIONAL MATCH (a)-[:hasIri]->(:OntologyTerm)-->(:OLS)" \
+            "-[:hasParent*1..]->(eo:OLS{iri:{iri}}) " \
             "RETURN count(distinct u) as count, eo IS NULL as ontology_missing"
         results = session.run(cypher, {"attr_type": attr_type, "iri": iri})
         for record in results:
@@ -303,7 +303,7 @@ def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
     with db_driver.session() as session:
         cypher = \
             "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})" \
-            "-->(o:OntologyTerm)-[inefo:inEfo]->(efo:EfoOntologyTerm{obsolete:'True'}) " \
+            "-->(o:OntologyTerm)-->(efo:OLS{obsolete:'True'}) " \
             "RETURN DISTINCT a.value AS value, COUNT(u) AS count, o.iri AS iri"
         results = session.run(cypher, {"attr_type": attr_type})
         for record in results:
