@@ -1,4 +1,5 @@
-# pip install neo4j-driver wordcloud matplotlib pillow image
+# pip install neo4j-driver wordcloud matplotlib pillow image unicodecsv
+from __future__ import unicode_literals
 import argparse
 import csv
 import matplotlib
@@ -6,6 +7,7 @@ import numpy as np
 import os
 import random
 import wordcloud
+import unicodecsv
 from neo4j.v1 import GraphDatabase, basic_auth
 
 matplotlib.use('Agg')
@@ -25,7 +27,7 @@ def get_most_common_attributes(db_driver, n_attributes, force=True):
         if not force and os.path.isfile('neo4j-analysis/csv/attr_common.csv'):
             with open('neo4j-analysis/csv/attr_common.csv', 'r') as f:
                 attr_re = re.compile("(?P<type>(?:\w+\s?)+)\s\((?P<usage_count>\d+)\)")
-                csv_reader = csv.reader(f)
+                csv_reader = unicodecsv.reader(f)
                 n = 0
                 while n < n_attributes:
                     row = next(csv_reader)
@@ -67,15 +69,15 @@ def generate_summary(args, db_driver):
 
 def generate_summary_spreadsheet(args, db_driver):
     print "generating summary spreadsheet of most common attribute types and values"
-    common = get_most_common_attributes(db_driver, 100, force=True)
+    common = get_most_common_attributes(db_driver, 250, force=True)
 
     try:
-        os.makedirs("neo4j-analysis/csv")
+        os.makedirs(args.path)
     except OSError:
         pass
 
-    with open("neo4j-analysis/csv/attr_common.csv", "w") as outfile:
-        csvout = csv.writer(outfile)
+    with open(args.path+"/attr_common.csv", "w") as outfile:
+        csvout = unicodecsv.writer(outfile)
 
         for attr in common:
             row = ["{} ({})".format(attr[0], attr[1])]
@@ -83,7 +85,7 @@ def generate_summary_spreadsheet(args, db_driver):
             with db_driver.session() as session2:
                 cypher = "MATCH (s:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name: {attr_type}}), \
                             (a:Attribute)-->(v:AttributeValue) \
-                            RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 10"
+                            RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT 25"
                 results2 = session2.run(cypher, {"attr_type": attr[0]})
                 for result2 in results2:
                     row.append("{} ({})".format(result2["value"], result2["usage_count"]))
@@ -115,10 +117,10 @@ def generate_summary_plots(args, db_driver):
     axis.set_ylabel("Frequency")
 
     try:
-        os.makedirs("neo4j-analysis/plot")
+        os.makedirs(args.path)
     except OSError:
         pass
-    fig.savefig("neo4j-analysis/plot/freq-of-number-attrs.png", bbox_inches='tight')
+    fig.savefig(args.path+"/freq-of-number-attrs.png", bbox_inches='tight')
 
     """
     There are some samples that have many many attributes. Typically, these are survey results
@@ -142,10 +144,10 @@ def generate_summary_wordcloud(args, db_driver):
     wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq)
     wc.recolor(color_func=grey_color_func, random_state=3)
     try:
-        os.makedirs("neo4j-analysis/word_clouds")
+        os.makedirs(args.path+"/word_clouds")
     except OSError:
         pass
-    wc.to_file("neo4j-analysis/word_clouds/cloud-types.png")
+    wc.to_file(args.path+"/word_clouds/cloud-types.png")
     print "generated wordcloud of most common attribute types and values"
 
 
@@ -170,10 +172,10 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
     wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq2)
     wc.recolor(color_func=grey_color_func, random_state=3)
     try:
-        os.makedirs("neo4j-analysis/word_clouds")
+        os.makedirs(args.path+"/word_clouds")
     except OSError:
         pass
-    wc.to_file("neo4j-analysis/word_clouds/cloud-values-{:07d}-{}.png".format(usage_count,attr_type))
+    wc.to_file(args.path+"/word_clouds/cloud-values-{:07d}-{}.png".format(usage_count,attr_type))
     print "generated wordcloud of values of", attr_type
 
 
@@ -224,11 +226,11 @@ def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxc
 def number_of_values_per_type(args, db_driver):
     print "generating spreadsheet with number of values for each attribute type"
     try:
-        os.makedirs("neo4j-analysis/csv")
+        os.makedirs(args.path)
     except OSError:
         pass
-    with open("neo4j-analysis/csv/num_values_distribution.csv", "w") as fileout:
-        csvout = csv.writer(fileout)
+    with open(args.path+"/num_values_distribution.csv", "w") as fileout:
+        csvout = unicodecsv.writer(fileout)
 
         cypher = "MATCH (s:Sample)-->(a:Attribute)-->(at:AttributeType) \
                   WITH at.name AS attr_type, COUNT(DISTINCT a.value) AS n_values, COUNT(s) AS n_samples \
@@ -272,10 +274,10 @@ def number_of_values_per_type(args, db_driver):
         ax2.set_ylabel("Diversity of values")
 
         try:
-            os.makedirs("neo4j-analysis/plot")
+            os.makedirs(args.path)
         except OSError:
             pass
-        fig.savefig("neo4j-analysis/plot/value-diversity.png", bbox_inches='tight')
+        fig.savefig(args.path+"/value-diversity.png", bbox_inches='tight')
 
 
 def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
@@ -330,7 +332,7 @@ def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
 #             pass
 #
 #         with open("neo4j-analysis/csv/{}_efo_label_matching.csv".format(attr_type), "w") as outfile:
-#             csvout = csv.writer(outfile)
+#             csvout = unicodecsv.writer(outfile)
 #
 #             for attr in common:
 #                 row = ["{} ({})".format(attr[0], attr[1])]
@@ -354,6 +356,7 @@ if __name__ == "__main__":
     parser.add_argument('--wordcloud-entries', type=int, default=1000)
     parser.add_argument('--top-attr', type=int, default=0)
     parser.add_argument('--attr', action='append')
+    parser.add_argument('--path', default="out")
 
     args = parser.parse_args()
 
