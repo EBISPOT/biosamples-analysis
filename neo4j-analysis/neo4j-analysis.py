@@ -356,6 +356,26 @@ def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
     prop = float(total) / float(usage_count)
     print "for type '{:s}' ontologies terms are obsolete for {:.0%} of uses".format(attr_type, prop)
 
+
+def check_attribute_type_casing(args, db_driver, attr_type):
+    cypher = 'MATCH (a:AttributeType) ' \
+             'WHERE LOWER(a.name)=LOWER({attr_type}) ' \
+             'RETURN COUNT(a.name) as number, collect(a.name) AS values'
+
+    with db_driver.session() as session:
+        results = session.run(cypher, {"attr_type": attr_type})
+
+        for result in results:
+            print "for type '{:s}' the possible cases are {:d}: {:s}".format(
+                    attr_type,
+                    result["number"],
+                    ", ".join(result["values"])
+                )
+
+
+def check_common_values(args,db_driver, attr_type1, attr_type2):
+    pass
+
 if __name__ == "__main__":
     print "Welcome to the BioSamples analysis"
 
@@ -384,15 +404,14 @@ if __name__ == "__main__":
             attrs.append((attr, usage_count))
 
     for attr_type, usage_count in attrs:
-        generate_wordcloud_of_attribute(args, driver, attr_type, usage_count)
-        attribute_value_mapped(args, driver, attr_type, usage_count)
-        # py2neo_attribute_value_mapped_label_match(args, graph, attr_type, usage_count)
-        attribute_value_mapped_label_match(args, driver, attr_type, usage_count)
-        attribute_value_mapped_obsolete(args, driver, attr_type, usage_count)
-        attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
-        attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
-        attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
+        check_attribute_type_casing(args, driver, attr_type)
+        # generate_wordcloud_of_attribute(args, driver, attr_type, usage_count)
+        # attribute_value_mapped(args, driver, attr_type, usage_count)
+        # attribute_value_mapped_label_match(args, driver, attr_type, usage_count)
+        # attribute_value_mapped_obsolete(args, driver, attr_type, usage_count)
+        # attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
+        # attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
+        # attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
 
-        iri = get_attribute_type_iri(attr_type)
-        attribute_value_child(args, driver, attr_type, usage_count, iri)
-        # py2neo_attribute_value_child(args, graph, attr_type, usage_count, iri)
+        # iri = get_attribute_type_iri(attr_type)
+        # attribute_value_child(args, driver, attr_type, usage_count, iri)
