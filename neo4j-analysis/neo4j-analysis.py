@@ -9,7 +9,6 @@ import random
 import wordcloud
 import unicodecsv
 from neo4j.v1 import GraphDatabase, basic_auth
-from py2neo import Graph
 
 matplotlib.use('Agg')
 import matplotlib.pyplot
@@ -20,9 +19,19 @@ def get_attribute_type_iri(attr_type):
     mapping = {
         "Sex": "http://purl.obolibrary.org/obo/PATO_0000047",
         "Organism Part": "http://www.ebi.ac.uk/efo/EFO_0000635",
-        "Organism": "http://purl.obolibrary.org/obo/OBI_0100026"
+        "Organism": "http://purl.obolibrary.org/obo/OBI_0100026",
+        "Cell Type":"http://www.ebi.ac.uk/efo/EFO_0000324",
+        "Developmental Stage":"http://www.ebi.ac.uk/efo/EFO_0000399",
+        "Cultivar":"http://www.ebi.ac.uk/efo/EFO_0005136",
+        "Ethnicity":"http://www.ebi.ac.uk/efo/EFO_0001799",
+        "Race":"http://www.ebi.ac.uk/efo/EFO_0001799",
+        "Disease State":"http://www.ebi.ac.uk/efo/EFO_0000408"
     }
-    return mapping[attr_type]
+    
+    if not attr_type in mapping:
+        return None
+    else:
+        return mapping[attr_type]
 
 
 def grey_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
@@ -179,14 +188,15 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
         results2 = session2.run(cypher, {"attr_type":attr_type, "max_words":max_words})
         for result2 in results2:
             freq2.append((result2["value"], result2["usage_count"]))
-    wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq2)
-    wc.recolor(color_func=grey_color_func, random_state=3)
-    try:
-        os.makedirs(args.path+"/word_clouds")
-    except OSError:
-        pass
-    wc.to_file(args.path+"/word_clouds/cloud-values-{:07d}-{}.png".format(usage_count,attr_type))
-    print "generated wordcloud of values of", attr_type
+    if len(freq2) > 0:
+        wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq2)
+        wc.recolor(color_func=grey_color_func, random_state=3)
+        try:
+            os.makedirs(args.path+"/word_clouds")
+        except OSError:
+            pass
+        wc.to_file(args.path+"/word_clouds/cloud-values-{:07d}-{}.png".format(usage_count,attr_type))
+        print "generated wordcloud of values of", attr_type
 
 
 def attribute_value_mapped(args, db_driver, attr_type, usage_count):
@@ -195,9 +205,13 @@ def attribute_value_mapped(args, db_driver, attr_type, usage_count):
     with db_driver.session() as session:
         result = session.run(cypher, {"attr_type": attr_type})
         for record in result:
-            prop = float(record["mapped"]) / float(usage_count)
-            print "for type '{:s}' ontologies terms are mapped for {:.0%} of uses".format(attr_type, prop)
-            return prop
+            if float(usage_count) > 0:
+                prop = float(record["mapped"]) / float(usage_count)
+                print "for type '{:s}' ontologies terms are mapped for {:.0%} of uses".format(attr_type, prop)
+                return prop
+            else:
+                print "for type '{:s}' ontologies terms are mapped for 0% of uses".format(attr_type)
+                return 0
 
 
 def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
@@ -207,21 +221,14 @@ def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
     with db_driver.session() as session:
         result = session.run(cypher, {"attr_type": attr_type})
         for record in result:
-            prop = float(record["label_match_count"]) / float(usage_count)
-            print "for type '{:s}' ontologies terms have the same value for {:.0%} of uses".format(attr_type, prop)
-            return prop
+            if float(usage_count) > 0:
+                prop = float(record["label_match_count"]) / float(usage_count)
+                print "for type '{:s}' ontologies terms have the same value for {:.0%} of uses".format(attr_type, prop)
+                return prop
+            else:
+                print "for type '{:s}' ontologies terms have the same value for 0% of uses".format(attr_type)
+                return 0
 
-
-def py2neo_attribute_value_mapped_label_match(args, graph, attr_type, usage_count):
-    cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(ols:OLS) \
-        WHERE ols.label = a.value OR a.value IN ols.`synonyms[]`\
-        RETURN COUNT(DISTINCT u) AS label_match_count'
-
-    result = graph.data(cypher, {"attr_type": attr_type})
-    for record in result:
-        prop = float(record["label_match_count"]) / float(usage_count)
-        print "for type '{:s}' ontologies terms have the same value for {:.0%} of uses".format(attr_type, prop)
-        return prop
 
 
 def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxcount):
@@ -318,28 +325,9 @@ def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
                 values["not_missing"] = record["count"]
 
     count = values["not_missing"] if "not_missing" in values else 0
-    prop = float(count) / float(usage_count)
-    print "for type '{:s}' ontologies terms are a child term for {:.0%} of uses".format(attr_type, prop)
-
-
-def py2neo_attribute_value_child(args, graph, attr_type, usage_count, iri):
-    values = dict()
-
-    cypher = \
-        "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
-        "OPTIONAL MATCH (a)-[:hasIri]->(:OntologyTerm)-[:inEfo]->(:efoOntologyTerm)" \
-        "-[:hasParent*1..]->(eo:efoOntologyTerm{iri:{iri}}) " \
-        "RETURN count(distinct u) as count, eo IS NULL as ontology_missing"
-    results = graph.data(cypher, {"attr_type": attr_type, "iri": iri})
-    for record in results:
-        if record["ontology_missing"]:
-            values["missing"] = record["count"]
-        else:
-            values["not_missing"] = record["count"]
-
-    count = values["not_missing"] if "not_missing" in values else 0
-    prop = float(count) / float(usage_count)
-    print "for type '{:s}' ontologies terms are a child term for {:.0%} of uses".format(attr_type, prop)
+    if float(usage_count) > 0:
+        prop = float(count) / float(usage_count)
+        print "for type '{:s}' ontologies terms are a child term for {:.0%} of uses".format(attr_type, prop)
 
 
 def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
@@ -353,8 +341,9 @@ def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
         for record in results:
             total += record["count"]
 
-    prop = float(total) / float(usage_count)
-    print "for type '{:s}' ontologies terms are obsolete for {:.0%} of uses".format(attr_type, prop)
+    if float(usage_count) > 0:
+        prop = float(total) / float(usage_count)
+        print "for type '{:s}' ontologies terms are obsolete for {:.0%} of uses".format(attr_type, prop)
 
 if __name__ == "__main__":
     print "Welcome to the BioSamples analysis"
@@ -370,7 +359,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     driver = GraphDatabase.driver("bolt://" + args.hostname)
-    graph = Graph("http://localhost:7474/db/data", {"bolt": None})
     print "Generation of reports started"
 
     # spreadsheet of most common attribute types and values
@@ -386,7 +374,6 @@ if __name__ == "__main__":
     for attr_type, usage_count in attrs:
         generate_wordcloud_of_attribute(args, driver, attr_type, usage_count)
         attribute_value_mapped(args, driver, attr_type, usage_count)
-        # py2neo_attribute_value_mapped_label_match(args, graph, attr_type, usage_count)
         attribute_value_mapped_label_match(args, driver, attr_type, usage_count)
         attribute_value_mapped_obsolete(args, driver, attr_type, usage_count)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
@@ -394,5 +381,5 @@ if __name__ == "__main__":
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
 
         iri = get_attribute_type_iri(attr_type)
-        attribute_value_child(args, driver, attr_type, usage_count, iri)
-        # py2neo_attribute_value_child(args, graph, attr_type, usage_count, iri)
+        if iri is not None:
+            attribute_value_child(args, driver, attr_type, usage_count, iri)
