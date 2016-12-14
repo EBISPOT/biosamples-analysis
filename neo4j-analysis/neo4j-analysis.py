@@ -9,7 +9,7 @@ import random
 import wordcloud
 import unicodecsv
 from neo4j.v1 import GraphDatabase, basic_auth
-
+import json
 matplotlib.use('Agg')
 import matplotlib.pyplot
 import re
@@ -95,7 +95,7 @@ def generate_summary_spreadsheet(args, db_driver):
     except OSError:
         pass
 
-    with open(args.path+"/attr_common.csv", "w") as outfile:
+    with open(args.path + "/attr_common.csv", "w") as outfile:
         csvout = unicodecsv.writer(outfile)
 
         for attr in common:
@@ -139,7 +139,7 @@ def generate_summary_plots(args, db_driver):
         os.makedirs(args.path)
     except OSError:
         pass
-    fig.savefig(args.path+"/freq-of-number-attrs.png", bbox_inches='tight')
+    fig.savefig(args.path + "/freq-of-number-attrs.png", bbox_inches='tight')
 
     """
     There are some samples that have many many attributes. Typically, these are survey results
@@ -163,10 +163,10 @@ def generate_summary_wordcloud(args, db_driver):
     wc = wordcloud.WordCloud(width=640, height=512, scale=2.0, max_words=max_words).generate_from_frequencies(freq)
     wc.recolor(color_func=grey_color_func, random_state=3)
     try:
-        os.makedirs(args.path+"/word_clouds")
+        os.makedirs(args.path + "/word_clouds")
     except OSError:
         pass
-    wc.to_file(args.path+"/word_clouds/cloud-types.png")
+    wc.to_file(args.path + "/word_clouds/cloud-types.png")
     print "generated wordcloud of most common attribute types and values"
 
 
@@ -213,7 +213,6 @@ def attribute_value_mapped(args, db_driver, attr_type, usage_count):
                 print "for type '{:s}' ontologies terms are mapped for 0% of uses".format(attr_type)
                 return 0
 
-
 def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
     cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(ols:OLS) \
         WHERE ols.label = a.value OR a.value IN ols.`synonyms[]`\
@@ -230,25 +229,24 @@ def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
                 return 0
 
 
-
 def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxcount):
-
     with db_driver.session() as session:
         cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) \
             RETURN a.value, count(u) AS count_s \
             ORDER BY count(u) DESC \
             LIMIT {maxcount}"
-        result = session.run(cypher, {"attr_type":attr_type, "maxcount":maxcount})
+        result = session.run(cypher, {"attr_type": attr_type, "maxcount": maxcount})
         running_total = 0
         i = 0
         for record in result:
             i += 1
             running_total += record["count_s"]
-            if running_total > float(usage_count)*prop:
-                print "for type '{:s}' the top {:d} values cover {:.0%} of uses".format(attr_type,i,prop)
+            if running_total > float(usage_count) * prop:
+                print "for type '{:s}' the top {:d} values cover {:.0%} of uses".format(attr_type, i, prop)
                 return i
             if i >= maxcount:
-                print "for type '{:s}' the top {:d} values do not cover {:.0%} of uses".format(attr_type,maxcount,prop)
+                print "for type '{:s}' the top {:d} values do not cover {:.0%} of uses".format(attr_type, maxcount,
+                                                                                               prop)
                 return None
 
 
@@ -258,7 +256,7 @@ def number_of_values_per_type(args, db_driver):
         os.makedirs(args.path)
     except OSError:
         pass
-    with open(args.path+"/num_values_distribution.csv", "w") as fileout:
+    with open(args.path + "/num_values_distribution.csv", "w") as fileout:
         csvout = unicodecsv.writer(fileout)
 
         cypher = "MATCH (s:Sample)-->(a:Attribute)-->(at:AttributeType) \
@@ -306,7 +304,7 @@ def number_of_values_per_type(args, db_driver):
             os.makedirs(args.path)
         except OSError:
             pass
-        fig.savefig(args.path+"/value-diversity.png", bbox_inches='tight')
+        fig.savefig(args.path + "/value-diversity.png", bbox_inches='tight')
 
 
 def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
@@ -328,7 +326,6 @@ def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
     if float(usage_count) > 0:
         prop = float(count) / float(usage_count)
         print "for type '{:s}' ontologies terms are a child term for {:.0%} of uses".format(attr_type, prop)
-
 
 def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
     total = 0
@@ -356,14 +353,69 @@ def check_attribute_type_casing(args, db_driver, attr_type):
 
         for result in results:
             print "for type '{:s}' the possible cases are {:d}: {:s}".format(
-                    attr_type,
-                    result["number"],
-                    ", ".join(result["values"])
-                )
+                attr_type,
+                result["number"],
+                ", ".join(result["values"])
+            )
 
 
-def check_common_values(args,db_driver, attr_type1, attr_type2):
-    pass
+def check_common_values(args, db_driver, attr_type_a, attr_type_b):
+    global similar_terms_b, values_b
+    attr_values_query = "MATCH (a:Attribute{type:{type}}) RETURN a.value"
+    similar_values_query = "CALL apoc.index.search('attributes','Attribute.value:\"{value}\"') " \
+                           "YIELD node MATCH (node) WHERE node.type='{type}' " \
+                           "RETURN DISTINCT node.value AS value"
+    similar_terms = []
+    similar_terms_tuples = []
+    values_b = []
+    with db_driver.session() as session:
+        results = list(session.run(attr_values_query, {"type": attr_type_a}))
+        values_a = results
+
+        results = list(session.run(attr_values_query, {"type": attr_type_b}))
+        values_b = results
+
+        for value in values_b:
+            sanitized_value = value[0].replace("'", r"\'")
+            results = list(session.run(similar_values_query.format(type=attr_type_a, value=sanitized_value)))
+            new_similar_terms = [item["value"] for item in results if item["value"] not in similar_terms]
+            if len(new_similar_terms) > 0:
+                similar_terms.append(value)
+            similar_terms_tuples.extend([(value[0], item) for item in new_similar_terms])
+
+    perc_similar_values_b = 100*float(len(similar_terms))/len(values_b)
+    print "{type_a:s} covers {perc:.2f}% of terms in {type_b:s}".format(
+        type_a=attr_type_a, type_b=attr_type_b, perc=perc_similar_values_b
+    )
+
+
+    # common_values = filter(set(values_attr_type_a).__contains__, values_attr_type_b)
+    # values_a_count = len(values_attr_type_a)
+    # values_b_count = len(values_attr_type_b)
+    # common_values_count = len(common_values)
+    # unique_values_a = [item for item in values_attr_type_a if item not in common_values]
+    # unique_values_b = [item for item in values_attr_type_b if item not in common_values]
+    #
+    # unique_a_perc = 100 * (float(values_a_count - common_values_count) / values_a_count)
+    # shared_a_perc = 100 - unique_a_perc
+    # unique_b_perc = 100 * (float(values_b_count - common_values_count) / values_b_count)
+    # shared_b_perc = 100 - unique_b_perc
+
+    # print "comparing {attr_a:s} and {attr_b:s}: " \
+    #       "\n\tfor {attr_a:s} {shared_a:.2f}% of values are shared and {unique_a:.2f} are unique, " \
+    #       "\n\tfor {attr_b:s} {shared_b:.2f}% of values are shared and {unique_b:.2f} are unique".format(
+    # 	attr_a=attr_type_a, attr_b=attr_type_b,
+    # 	shared_a=shared_a_perc, shared_b=shared_b_perc,
+    # 	unique_a=unique_a_perc, unique_b=unique_b_perc)
+
+
+# print "some unique values for '{attr_a:s}' are: \n\t {unique_a:s}\n" \
+#       "some unique values for '{attr_b:s}' are: \n\t {unique_b:s}\n" \
+#       "some of the common values between '{attr_a:s}' and '{attr_b:s}' are: \n\t{common_values:s}".format(
+# 	attr_a=attr_type_a, attr_b=attr_type_b,
+# 	unique_a=', '.join(unique_values_a[:5]), unique_b=', '.join(unique_values_b[:5]),
+# 	common_values=', '.join(common_values[:5]))
+
 
 if __name__ == "__main__":
     print "Welcome to the BioSamples analysis"
@@ -404,3 +456,38 @@ if __name__ == "__main__":
         iri = get_attribute_type_iri(attr_type)
         if iri is not None:
             attribute_value_child(args, driver, attr_type, usage_count, iri)
+
+    print "Evaluation of shared terms"
+
+    print "===DISEASE STATE==="
+    check_common_values(args, driver, "Disease State", "Host Disease")
+    check_common_values(args, driver, "Disease State", "Clinically Affected Status")
+    check_common_values(args, driver, "Disease State", "Condition")
+    check_common_values(args, driver, "Disease State", "Diagnosis")
+    check_common_values(args, driver, "Disease State", "Infection")
+    check_common_values(args, driver, "Disease State", "Disease Status")
+    check_common_values(args, driver, "Disease State", "Clinical Information")
+    check_common_values(args, driver, "Disease State", "Subset Diabetes")
+    check_common_values(args, driver, "Disease State", "Subset Ibd")
+    check_common_values(args, driver, "Disease State", "Health State")
+    check_common_values(args, driver, "Disease State", "Disease")
+    check_common_values(args, driver, "Disease State", "Host Health State")
+    check_common_values(args, driver, "Disease State", "Status")
+    check_common_values(args, driver, "Disease State", "Affected By")
+    check_common_values(args, driver, "Disease State", "Clinical History")
+    check_common_values(args, driver, "Disease State", "Tumor")
+    check_common_values(args, driver, "Disease State", "Cause Of Death")
+
+    print "=== ORGANISM ==="
+    check_common_values(args, driver, "Organism", "Host")
+    check_common_values(args, driver, "Organism", "Species")
+    check_common_values(args, driver, "Organism", "Cell Type")
+    check_common_values(args, driver, "Organism", "Host Tax Id")
+    check_common_values(args, driver, "Organism", "Host Common Name")
+    check_common_values(args, driver, "Organism", "Taxon Id")
+    check_common_values(args, driver, "Organism", "Host Scientific Name")
+    check_common_values(args, driver, "Organism", "Host Taxonomy Id")
+    check_common_values(args, driver, "Organism", "Host Tissue Sampled")
+    check_common_values(args, driver, "Organism", "Sub Species")
+    check_common_values(args, driver, "Organism", "Host Taxid")
+    check_common_values(args, driver, "Organism", "Host Taxon Id")
