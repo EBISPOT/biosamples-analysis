@@ -222,10 +222,10 @@ def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
         for record in result:
             if float(usage_count) > 0:
                 prop = float(record["label_match_count"]) / float(usage_count)
-                print "for type '{:s}' ontologies terms have the same value for {:.0%} of uses".format(attr_type, prop)
+                print "for type '{:s}' ontologies terms match label or synonym for {:.0%} of uses".format(attr_type, prop)
                 return prop
             else:
-                print "for type '{:s}' ontologies terms have the same value for 0% of uses".format(attr_type)
+                print "for type '{:s}' ontologies terms match label or synonym for 0% of uses".format(attr_type)
                 return 0
 
 
@@ -404,17 +404,17 @@ def check_common_values(args, db_driver, attr_type_a, attr_type_b):
     # print "comparing {attr_a:s} and {attr_b:s}: " \
     #       "\n\tfor {attr_a:s} {shared_a:.2f}% of values are shared and {unique_a:.2f} are unique, " \
     #       "\n\tfor {attr_b:s} {shared_b:.2f}% of values are shared and {unique_b:.2f} are unique".format(
-    # 	attr_a=attr_type_a, attr_b=attr_type_b,
-    # 	shared_a=shared_a_perc, shared_b=shared_b_perc,
-    # 	unique_a=unique_a_perc, unique_b=unique_b_perc)
+    #   attr_a=attr_type_a, attr_b=attr_type_b,
+    #   shared_a=shared_a_perc, shared_b=shared_b_perc,
+    #   unique_a=unique_a_perc, unique_b=unique_b_perc)
 
 
 # print "some unique values for '{attr_a:s}' are: \n\t {unique_a:s}\n" \
 #       "some unique values for '{attr_b:s}' are: \n\t {unique_b:s}\n" \
 #       "some of the common values between '{attr_a:s}' and '{attr_b:s}' are: \n\t{common_values:s}".format(
-# 	attr_a=attr_type_a, attr_b=attr_type_b,
-# 	unique_a=', '.join(unique_values_a[:5]), unique_b=', '.join(unique_values_b[:5]),
-# 	common_values=', '.join(common_values[:5]))
+#   attr_a=attr_type_a, attr_b=attr_type_b,
+#   unique_a=', '.join(unique_values_a[:5]), unique_b=', '.join(unique_values_b[:5]),
+#   common_values=', '.join(common_values[:5]))
 
 
 if __name__ == "__main__":
@@ -425,6 +425,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary', action='store_true')
     parser.add_argument('--wordcloud-entries', type=int, default=1000)
     parser.add_argument('--top-attr', type=int, default=0)
+    #this will accept underscores and replace them with spaces in attribute types
     parser.add_argument('--attr', action='append')
     parser.add_argument('--path', default="out")
 
@@ -440,6 +441,7 @@ if __name__ == "__main__":
     attrs = get_most_common_attributes(driver, args.top_attr, force=False)
     if args.attr is not None:
         for attr in args.attr:
+            attr = attr.replace("_", " ")
             usage_count = get_usage_count(driver, attr)
             attrs.append((attr, usage_count))
 
