@@ -27,12 +27,8 @@ services:
       - ./data:/data
     
   neo4j-server-local:
-    #image: neo4j:3.0.6
     build:
         context: ./neo4j-server-local
-    #environment:
-    #    NEO4J_AUTH: none
-    #    NEO4J_HOME: /var/lib/neo4j
     volumes:
         - ./data:/data
         - ./neo4j-server-local/conf:/conf
@@ -40,6 +36,21 @@ services:
         - "7473:7473"
         - "7474:7474"
         - "7687:7687"
+#    command: dump-config
+    
+  neo4j-server-local-dev:
+    build:
+        context: ./neo4j-server-local
+    volumes:
+        - ./data_dev:/data
+        - ./neo4j-server-local/conf:/conf
+    
+  neo4j-server-local-prod:
+    build:
+        context: ./neo4j-server-local
+    volumes:
+        - ./data_prod:/data
+        - ./neo4j-server-local/conf:/conf
 
   #to run this container use a command like:
   #docker-compose run --service-ports neo4j-analysis [ARGS]
@@ -68,7 +79,9 @@ services:
       - neo4j-server-local
     entrypoint:
       - ./wait-for-it.sh
+      - neo4j-server-local:7473
       - neo4j-server-local:7474
+      - neo4j-server-local:7687
       - --
       - python
       - -u
