@@ -491,3 +491,98 @@ if __name__ == "__main__":
             check_common_values(args, driver, "Organism", "Sub Species")
             check_common_values(args, driver, "Organism", "Host Taxid")
             check_common_values(args, driver, "Organism", "Host Taxon Id")
+
+
+    print "trying to do some clustering stuff"    
+    # 1) for each sample, walk up the ncbi taxonomy tree and add one to each node
+    # 2) make a set of leaf nodes
+    # 3) find the leaf-but-one node with the loweset score
+    # 4) remove the leaf nodes of the leaf-but one from the set
+    # 5) add the leaf-but-one as a new leaf
+    # 6) repeat from 3) until there is a sufficiently low number (10)
+    
+    scores = {}
+    with driver.session() as session:
+        results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-[:hasIri]->()-[:inNcbitaxon]->()-[:hasParent*0]->(n:ncbitaxonOntologyTerm) RETURN count(s) AS s, n.iri AS n")
+        for result in results:
+            scores[result["n"]] = result["s"]
+            #print result["n"], result["s"]
+        print "len(scores)","=",len(scores)
+        
+        leaves = set()
+        results = session.run("MATCH (n:ncbitaxonOntologyTerm)  OPTIONAL MATCH (m)-[:hasParent]->(n) WHERE m IS NULL RETURN n.iri AS n")
+        for result in results:
+            leaves.add(result["n"])
+            
+        parents_cache = {}
+        childs_cache = {}
+        
+        def get_cached_parent(iri, parents_cache, childs_cache):
+            if iri not in parents_cache:
+                results = session.run("MATCH (m:ncbitaxonOntologyTerm{iri:{iri}})-[:hasParent]->(n:ncbitaxonOntologyTerm) RETURN n.iri AS n",
+                        {"iri": iri})
+                for result in results:
+                    child = iri
+                    parent = result["n"]
+                    
+                    if parent not in childs_cache:
+                        childs_cache[parent] = set()
+                    parents_cache[child] = parent
+                    
+                    childs_cache[parent].add(child)
+            #if there is no cached version at this point, we must be on top of the tree
+            if iri not in parents_cache:
+                return None
+            return parents_cache[iri]
+        
+        def get_cached_child(iri, parents_cache, childs_cache):
+            if iri not in childs_cache:
+                results = session.run("MATCH (m:ncbitaxonOntologyTerm)-[:hasParent]->(n:ncbitaxonOntologyTerm{iri:{iri}}) RETURN m.iri AS m",
+                        {"iri": iri})
+                        
+                parent = iri
+                if parent not in childs_cache:
+                    childs_cache[parent] = set()
+                    
+                for result in results:
+                    child = result["m"]
+                    
+                    parents_cache[child] = parent
+                    
+                    childs_cache[parent].add(child)
+            return childs_cache[iri]
+                
+            
+            
+        while len(leaves) > 10:
+            print "len(leaves)","=",len(leaves)
+            
+            penultimates = set()
+            for leaf in leaves:
+                parent = get_cached_parent(leaf, parents_cache, childs_cache)
+                if parent != None:
+                    penultimates.add(parent)
+            print "len(penultimates)","=",len(penultimates)
+            
+            penultimate = None
+            penultimate_score = -1
+            for test in penultimates:
+                test_score = 0
+                if test in scores:
+                    test_score = scores[test]
+                if penultimate is None or test_score < penultimate_score:
+                    penultimate = test
+                    penultimate_score = test_score
+            
+            print "highest penultimate","=",penultimate
+            
+            
+            for child in get_cached_child(penultimate, parents_cache, childs_cache):
+                #print "removing", result["m"]
+                if child in leaves:
+                    leaves.remove(child)
+            leaves.add(penultimate)
+
+        for leaf in leaves:
+            print "leaf","=", leaf
+    
