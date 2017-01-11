@@ -417,6 +417,87 @@ def check_common_values(args, db_driver, attr_type_a, attr_type_b):
 #   common_values=', '.join(common_values[:5]))
 
 
+def find_clusters(driver, target):
+    print "trying to do some clustering stuff"    
+    # 1) for each sample, walk up the ncbi taxonomy tree and add one to each node
+    # 2) make a set of leaf nodes
+    # 3) find the leaf-but-one node with the loweset score
+    # 4) remove the leaf nodes of the leaf-but one from the set
+    # 5) add the leaf-but-one as a new leaf
+    # 6) repeat from 3) until there is a sufficiently low number (10)
+    
+    raw_scores = {}
+    scores = {}
+    parents = {}
+    children = {}
+    labels = {}
+    leaves = list()    
+    with driver.session() as session:
+        
+        #print "getting parents"
+        results = session.run("""MATCH (m:ncbitaxonOntologyTerm)-[:hasParent]->(n:ncbitaxonOntologyTerm) 
+                RETURN DISTINCT m.iri AS m, m.label as mlabel, n.iri AS n""")
+        for result in results:
+            parents[result["m"]] = result["n"]
+            labels[result["m"]] = result["mlabel"]
+            if result["n"] not in children:
+                children[result["n"]] = set()
+            children[result["n"]].add(result["m"])
+        #print "got",len(parents), "parents"
+        #print "got",len(children), "children"
+        
+        #print "getting raw_scores"
+        results = session.run("""MATCH (s:Sample)-[:hasAttribute]->(:Attribute{type:'Organism'})-[:hasIri]->()-[:inNcbitaxon]->(n:ncbitaxonOntologyTerm) RETURN count(distinct s) AS s, n.iri AS n""")
+        for result in results:
+            raw_scores[result["n"]] = int(result["s"])
+        #print "got",len(raw_scores), "raw_scores"
+        
+        #print the top 10 raw scores
+        
+        topscores = sorted(raw_scores.viewkeys(), reverse=True, key=lambda iri : raw_scores[iri])
+        for topscore in topscores[:10]:
+            print "found raw score", "'"+labels[topscore]+"'", "(",topscore,")","with score", raw_scores[topscore]
+
+        def getscore(iri):
+            if iri in scores:
+                return scores[iri]
+            score = 0
+            if iri in children:
+                score = score + sum((getscore(i) for i in children[iri]))
+            if iri in raw_scores:
+                score = score + raw_scores[iri]
+            scores[iri] = score
+            return scores[iri]
+                
+        #print "calculating scores"
+        for iri in parents:
+            getscore(iri)
+        #print "calculated scores"
+        
+        #calculate watershed
+        totalscore = sum(raw_scores.viewvalues())
+        maxscore = max(scores.viewvalues())
+        #print "totalscore","=",totalscore
+        #print "maxscore","=",maxscore
+        
+        watershed = maxscore / target
+        #print "watershed","=",watershed
+        
+        bignodes = set([n for n in scores if scores[n] >= watershed])
+        print len(bignodes),"nodes over watershed"
+        
+        #now find leaf nodes in the subset above the watershed
+        bigleaves = set()
+        for bignode in bignodes:
+            if bignode not in children:
+                bigleaves.add(bignode)
+            elif len(children[bignode] & bignodes) == 0:
+                bigleaves.add(bignode)
+
+        for bigleaf in sorted(bigleaves, key=lambda bigleaf: scores[bigleaf]):
+            print "found big leaf", "'"+labels[bigleaf]+"'", "(",bigleaf,")","with score", scores[bigleaf]
+        #print "found", len(bigleaves),"big leaves"
+
 if __name__ == "__main__":
     print "Welcome to the BioSamples analysis"
 
@@ -425,6 +506,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary', action='store_true')
     parser.add_argument('--wordcloud-entries', type=int, default=1000)
     parser.add_argument('--top-attr', type=int, default=0)
+    parser.add_argument('--cluster', type=int, default=0)
     #this will accept underscores and replace them with spaces in attribute types
     parser.add_argument('--attr', action='append')
     parser.add_argument('--path', default="out")
@@ -492,97 +574,7 @@ if __name__ == "__main__":
             check_common_values(args, driver, "Organism", "Host Taxid")
             check_common_values(args, driver, "Organism", "Host Taxon Id")
 
+    if args.cluster > 0:
+        find_clusters(driver, args.cluster)
 
-    print "trying to do some clustering stuff"    
-    # 1) for each sample, walk up the ncbi taxonomy tree and add one to each node
-    # 2) make a set of leaf nodes
-    # 3) find the leaf-but-one node with the loweset score
-    # 4) remove the leaf nodes of the leaf-but one from the set
-    # 5) add the leaf-but-one as a new leaf
-    # 6) repeat from 3) until there is a sufficiently low number (10)
-    
-    scores = {}
-    with driver.session() as session:
-        results = session.run("MATCH (s:Sample)-[:hasAttribute]->(:Attribute)-[:hasIri]->()-[:inNcbitaxon]->()-[:hasParent*0]->(n:ncbitaxonOntologyTerm) RETURN count(s) AS s, n.iri AS n")
-        for result in results:
-            scores[result["n"]] = result["s"]
-            #print result["n"], result["s"]
-        print "len(scores)","=",len(scores)
-        
-        leaves = set()
-        results = session.run("MATCH (n:ncbitaxonOntologyTerm)  OPTIONAL MATCH (m)-[:hasParent]->(n) WHERE m IS NULL RETURN n.iri AS n")
-        for result in results:
-            leaves.add(result["n"])
-            
-        parents_cache = {}
-        childs_cache = {}
-        
-        def get_cached_parent(iri, parents_cache, childs_cache):
-            if iri not in parents_cache:
-                results = session.run("MATCH (m:ncbitaxonOntologyTerm{iri:{iri}})-[:hasParent]->(n:ncbitaxonOntologyTerm) RETURN n.iri AS n",
-                        {"iri": iri})
-                for result in results:
-                    child = iri
-                    parent = result["n"]
-                    
-                    if parent not in childs_cache:
-                        childs_cache[parent] = set()
-                    parents_cache[child] = parent
-                    
-                    childs_cache[parent].add(child)
-            #if there is no cached version at this point, we must be on top of the tree
-            if iri not in parents_cache:
-                return None
-            return parents_cache[iri]
-        
-        def get_cached_child(iri, parents_cache, childs_cache):
-            if iri not in childs_cache:
-                results = session.run("MATCH (m:ncbitaxonOntologyTerm)-[:hasParent]->(n:ncbitaxonOntologyTerm{iri:{iri}}) RETURN m.iri AS m",
-                        {"iri": iri})
-                        
-                parent = iri
-                if parent not in childs_cache:
-                    childs_cache[parent] = set()
-                    
-                for result in results:
-                    child = result["m"]
-                    
-                    parents_cache[child] = parent
-                    
-                    childs_cache[parent].add(child)
-            return childs_cache[iri]
-                
-            
-            
-        while len(leaves) > 10:
-            print "len(leaves)","=",len(leaves)
-            
-            penultimates = set()
-            for leaf in leaves:
-                parent = get_cached_parent(leaf, parents_cache, childs_cache)
-                if parent != None:
-                    penultimates.add(parent)
-            print "len(penultimates)","=",len(penultimates)
-            
-            penultimate = None
-            penultimate_score = -1
-            for test in penultimates:
-                test_score = 0
-                if test in scores:
-                    test_score = scores[test]
-                if penultimate is None or test_score < penultimate_score:
-                    penultimate = test
-                    penultimate_score = test_score
-            
-            print "highest penultimate","=",penultimate
-            
-            
-            for child in get_cached_child(penultimate, parents_cache, childs_cache):
-                #print "removing", result["m"]
-                if child in leaves:
-                    leaves.remove(child)
-            leaves.add(penultimate)
-
-        for leaf in leaves:
-            print "leaf","=", leaf
     
