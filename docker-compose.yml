@@ -32,6 +32,7 @@ services:
     volumes:
         - ./data:/data
         - ./neo4j-server-local/conf:/conf
+        - ./neo4j-server-local/logs:/logs
     ports:
         - "7473:7473"
         - "7474:7474"
