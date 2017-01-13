@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 import argparse
 import csv
-import matplotlib
 import numpy as np
 import os
 import random
@@ -10,6 +9,7 @@ import wordcloud
 import unicodecsv
 from neo4j.v1 import GraphDatabase, basic_auth
 import json
+import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot
 import re
@@ -179,8 +179,6 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
 
     print "generating wordcloud of values of", attr_type
     with db_driver.session() as session2:
-        cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)-->(t:AttributeType{name:{attr_type}}), (a:Attribute)-->(v:AttributeValue) " \
-                 "RETURN v.name AS value, COUNT(u) AS usage_count ORDER BY usage_count DESC LIMIT {max_words}"
         cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) \
             RETURN a.value AS value, count(u) AS usage_count \
             ORDER BY count(u) DESC \
@@ -284,29 +282,88 @@ def number_of_values_per_type(args, db_driver):
         print "Mean: %d" % (stats["mean"])
         print "Median: %d" % (stats["median"])
         print "Mode: %d" % (stats["mode"])
-
+        """
         fig = matplotlib.pyplot.figure(figsize=(24, 18))
 
         ax1 = fig.add_subplot(211)
         ax1.bar(np.arange(len(n_values)), n_values, align="center")
         ax1.set_yscale("log")
         ax1.set_xticks(np.arange(len(n_values)))
+        ax1.set_xlim(0,len(n_values))
         ax1.set_ylabel("Number of attribute values")
 
         ax2 = fig.add_subplot(212)
         ax2.bar(np.arange(len(n_values)), ratios, align="center")
         ax2.set_xticks(np.arange(len(n_values)))
+        ax2.set_xlim(0,len(n_values))
         ax2.set_xticklabels(attr_types, rotation=90)
         ax2.set_xlabel("Attribute types")
         ax2.set_ylabel("Diversity of values")
-
+        """
+        
+        
+        fig = matplotlib.pyplot.figure(figsize=(6, 6))
+        ax = fig.add_subplot(111)
+        ax.bar(np.arange(len(n_values)), n_values, align="center", edgecolor='b')
+        ax.set_xticks(np.arange(len(n_values)))
+        ax.set_xlim(0,len(n_values))
+        ax.set_xticklabels(attr_types, rotation=90)
+        ax.set_xlabel("Attribute types")
+        ax.set_yscale("log")
+        ax.set_ylabel("Number of attribute values")
         try:
             os.makedirs(args.path)
         except OSError:
             pass
-        fig.savefig(args.path + "/value-diversity.png", bbox_inches='tight')
+        fig.savefig(args.path + "/value-diversity.png", bbox_inches='tight', dpi=300)
+        
+        
+        fig = matplotlib.pyplot.figure(figsize=(9, 6))
+        ax = fig.add_subplot(111)
+        ax.bar(np.arange(len(n_values)), ratios, align="center", edgecolor='b')
+        ax.set_xticks(np.arange(len(n_values)))
+        ax.set_xlim(0,len(n_values))
+        ax.set_xticklabels(attr_types, rotation=90)
+        ax.set_xlabel("Attribute types")
+        ax.set_ylabel("Number of attribute values per use")
+        try:
+            os.makedirs(args.path)
+        except OSError:
+            pass
+        fig.savefig(args.path + "/value-diversity-ratio.png", bbox_inches='tight', dpi=300)
 
 
+def number_of_uses_per_type(args, db_driver):
+    print "generating spreadsheet with number of uses for each attribute type"
+    try:
+        os.makedirs(args.path)
+    except OSError:
+        pass
+        
+
+        cypher = """MATCH (:Sample)-[u:hasAttribute]->(a:Attribute)
+                RETURN a.type AS type, COUNT(u) AS usage_count
+                ORDER BY usage_count DESC """
+                  
+        n_values = []
+        with db_driver.session() as session:
+            results = session.run(cypher)
+            for result in results:
+                n_values.append(result["usage_count"])
+                
+        
+        fig = matplotlib.pyplot.figure(figsize=(6, 6))
+
+        ax1 = fig.add_subplot(111)
+        ax1.bar(np.arange(len(n_values)), n_values, align="center", edgecolor='b')
+        #ax1.set_xscale("log")
+        #ax1.set_yscale("log")
+        ax1.set_xlim(0,len(n_values))
+        #ax1.set_xticks(np.arange(len(n_values)))
+        ax1.set_ylabel("Number of uses (log)")              
+        
+        fig.savefig(args.path + "/type-uses.png", bbox_inches='tight', dpi=300)
+                  
 def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
     values = dict()
     with db_driver.session() as session:
@@ -577,4 +634,5 @@ if __name__ == "__main__":
     if args.cluster > 0:
         find_clusters(driver, args.cluster)
 
-    
+    number_of_values_per_type(args, driver)
+    number_of_uses_per_type(args, driver)
