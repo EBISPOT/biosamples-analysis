@@ -16,6 +16,7 @@ import re
 
 
 def get_attribute_type_iri(attr_type):
+    
     mapping = {
         "Sex": "http://purl.obolibrary.org/obo/PATO_0000047",
         "Organism Part": "http://www.ebi.ac.uk/efo/EFO_0000635",
@@ -72,6 +73,13 @@ def get_usage_count(db_driver, attr_type):
                               "RETURN COUNT(u) AS usage_count", {"attr_type": attr_type})
         for result in results:
             return result["usage_count"]
+
+
+def get_total_attribute_usage(db_driver):
+    with db_driver.session() as session:
+        results = session.run("MATCH (:Sample)-[u:hasAttribute]->(:Attribute) RETURN COUNT(u)")
+    for result in results:
+        return result[0]
 
 
 def generate_summary(args, db_driver):
@@ -198,6 +206,9 @@ def generate_wordcloud_of_attribute(args, db_driver, attr_type, usage_count):
 
 
 def attribute_value_mapped(args, db_driver, attr_type, usage_count):
+    """
+    Return the number of values for an attribute type that are mapped to an ontology term
+    """
     cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) " \
              "RETURN COUNT(u) AS usage_count, COUNT(a.iri) AS mapped "
     with db_driver.session() as session:
@@ -211,7 +222,12 @@ def attribute_value_mapped(args, db_driver, attr_type, usage_count):
                 print "for type '{:s}' ontologies terms are mapped for 0% of uses".format(attr_type)
                 return 0
 
+
 def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
+    """
+    Return the number of values for an attribute type that are coincident with the label of the ontology term they're
+    mapped to or one of its synonyms
+    """
     cypher = 'MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}})-->(:OntologyTerm)-->(ols:OLS) \
         WHERE ols.label = a.value OR a.value IN ols.`synonyms[]`\
         RETURN COUNT(DISTINCT u) AS label_match_count'
@@ -228,6 +244,9 @@ def attribute_value_mapped_label_match(args, db_driver, attr_type, usage_count):
 
 
 def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxcount):
+    """
+    Return the number of attribute values that cover a proportion of attribute within a max count
+    """
     with db_driver.session() as session:
         cypher = "MATCH (:Sample)-[u:hasAttribute]->(a:Attribute{type:{attr_type}}) \
             RETURN a.value, count(u) AS count_s \
@@ -249,6 +268,9 @@ def attribute_value_coverage(args, db_driver, attr_type, usage_count, prop, maxc
 
 
 def number_of_values_per_type(args, db_driver):
+    """
+    Generate a spreadsheet with the number of values for each attribute type
+    """
     print "generating spreadsheet with number of values for each attribute type"
     try:
         os.makedirs(args.path)
@@ -384,7 +406,11 @@ def attribute_value_child(args, db_driver, attr_type, usage_count, iri):
         prop = float(count) / float(usage_count)
         print "for type '{:s}' ontologies terms are a child term for {:.0%} of uses".format(attr_type, prop)
 
+
 def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
+    """
+    Return the percentage of attribute that are mapped to an obsolete ontology term
+    """
     total = 0
     with db_driver.session() as session:
         cypher = \
@@ -401,6 +427,10 @@ def attribute_value_mapped_obsolete(args, db_driver, attr_type, usage_count):
 
 
 def check_attribute_type_casing(args, db_driver, attr_type):
+    """
+    Check the available cases available in the database for the attribute type
+    """
+
     cypher = 'MATCH (a:AttributeType) ' \
              'WHERE LOWER(a.name)=LOWER({attr_type}) ' \
              'RETURN COUNT(a.name) as number, collect(a.name) AS values'
@@ -417,6 +447,9 @@ def check_attribute_type_casing(args, db_driver, attr_type):
 
 
 def check_common_values(args, db_driver, attr_type_a, attr_type_b):
+    """
+    Check the number of values that are shared between to attribute types
+    """
     global similar_terms_b, values_b
     attr_values_query = "MATCH (a:Attribute{type:{type}}) RETURN a.value"
     similar_values_query = "CALL apoc.index.search('attributes','Attribute.value:\"{value}\"') " \
@@ -555,6 +588,58 @@ def find_clusters(driver, target):
             print "found big leaf", "'"+labels[bigleaf]+"'", "(",bigleaf,")","with score", scores[bigleaf]
         #print "found", len(bigleaves),"big leaves"
 
+def get_attributes_by_category():
+    """
+    Read the categories file and return a dictionary containing all the attributes separated by categories
+    """
+    categories = dict()
+    with open('neo4j-analysis/csv/attribute_categories.csv', 'r') as f:
+        csv_reader = unicodecsv.reader(f)
+        for row in csv_reader:
+            if len(row) == 2:
+                attr_type = row[0]
+                cat = row[1]
+                if cat not in categories.keys():
+                    categories[cat] = []
+                categories[cat].append(attr_type)
+
+    return categories
+
+
+def get_gold_grade_attributes(db_driver, attr_type):
+    pass
+
+
+def get_silver_grade_attributes(db_driver, attr_type):
+    pass
+
+
+def get_gold_grade_samples(db_driver):
+    pass
+
+
+def get_silver_grade_samples(db_driver):
+    pass
+
+
+def generate_categories_stats(db_driver):
+    """
+    Return some stats based on different attribute categories
+    """
+    print "generating statistics for attribute categories"
+    categories = get_attributes_by_category()
+    total_samples = get_total_attribute_usage(db_driver=driver)
+    categories_usage = {}
+    for cat, attributes in categories.items():
+        total_count = 0
+        for attr in attributes:
+            total_count += get_usage_count(db_driver=driver, attr_type=attr)
+        categories_usage[cat] = 100*float(total_count)/total_samples
+        print "{cat:s} category covers {perc:.2f}% of the attribute usages".format(
+            cat=cat, perc=categories_usage[cat]
+        )
+
+
 if __name__ == "__main__":
     print "Welcome to the BioSamples analysis"
 
@@ -564,6 +649,7 @@ if __name__ == "__main__":
     parser.add_argument('--wordcloud-entries', type=int, default=1000)
     parser.add_argument('--top-attr', type=int, default=0)
     parser.add_argument('--cluster', type=int, default=0)
+
     #this will accept underscores and replace them with spaces in attribute types
     parser.add_argument('--attr', action='append')
     parser.add_argument('--path', default="out")
@@ -571,7 +657,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     driver = GraphDatabase.driver("bolt://" + args.hostname)
+
     print "Generation of reports started"
+    generate_categories_stats(db_driver=driver)
 
     # spreadsheet of most common attribute types and values
     if args.summary:
@@ -584,6 +672,7 @@ if __name__ == "__main__":
             usage_count = get_usage_count(driver, attr)
             attrs.append((attr, usage_count))
 
+
     for attr_type, usage_count in attrs:
         check_attribute_type_casing(args, driver, attr_type)
         generate_wordcloud_of_attribute(args, driver, attr_type, usage_count)
@@ -593,11 +682,11 @@ if __name__ == "__main__":
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.50, 100)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.75, 250)
         attribute_value_coverage(args, driver, attr_type, usage_count, 0.95, 500)
-
         iri = get_attribute_type_iri(attr_type)
+
         if iri is not None:
             attribute_value_child(args, driver, attr_type, usage_count, iri)
-    
+
         if attr_type == "Disease State":
             check_common_values(args, driver, "Disease State", "Host Disease")
             check_common_values(args, driver, "Disease State", "Clinically Affected Status")
