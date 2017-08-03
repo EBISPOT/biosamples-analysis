@@ -6,15 +6,20 @@ Docker
 
 
 The plan is to have 4 different docker containers:
-	collate-attributes to query Solr and create a single combined CSV
-	create-csv to split that combined CSV into separate ones
-	build-neo to use the neo4j bulk loader to create a graph database
-	neo-data to have a self-contained neo4j server with data inside
+- **collate-attributes** to query Solr and create a single combined CSV
+- **create-csv** to split that combined CSV into separate ones
+- **populate-neo4j** to use the neo4j bulk loader to create a graph database
+- **neo4j-server-local** to have a self-contained neo4j server with data inside
 
-docker-compose up collate-attributes
-docker-compose up create-csv
-docker-compose up populate-neo4j
-docker-compose up neo4j-server(-local)
+Each of these containers have a dedicated folder with a Dockerimage necessary to build the container and describe what the container will do (usually that is run a script)
+
+To create and run these container, you need to use the next commands one after the other
+1. `docker-compose up collate-attributes`
+2. `docker-compose up create-csv`
+3. `docker-compose up populate-neo4j`
+4. `docker-compose up neo4j-server-local`
+
+Further informations about the containers could be found in the `docker-compose.yml` file
 
 Neo4J Server Local
 ======
